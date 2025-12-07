@@ -29,6 +29,15 @@ router.post('/:messageId/:claimIndex/generate-sources', async (req, res) => {
         console.log(`\n🔍 Generating sources for claim ${claimIndex} in message ${messageId}`);
         console.log(`📝 Claim: "${claimText}"`);
 
+        // Debug: Log model being used
+        const modelToUse = 'grok-4.1-fast';
+        console.log(`\n⚡ MODEL DEBUG:`);
+        console.log(`   Using model: ${modelToUse}`);
+        console.log(`   Model type: Lightning fast (optimized for widget)`);
+        console.log(`   Expected speed: 2-4 seconds`);
+
+        const startTime = Date.now();
+
         // Call Grok to generate sources
         const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
             method: 'POST',
@@ -37,7 +46,7 @@ router.post('/:messageId/:claimIndex/generate-sources', async (req, res) => {
                 'Authorization': `Bearer ${process.env.GROK_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'grok-4-0709', // Best model
+                model: modelToUse, // Lightning fast model for widget
                 messages: [
                     {
                         role: 'system',
@@ -90,18 +99,32 @@ If you cannot find 20 credible URLs, return fewer rather than making up fake URL
             })
         });
 
+        const responseTime = Date.now() - startTime;
+        console.log(`\n⏱️  TIMING DEBUG:`);
+        console.log(`   Grok API responded in: ${responseTime}ms (${(responseTime / 1000).toFixed(2)}s)`);
+        console.log(`   Response status: ${grokResponse.status} ${grokResponse.statusText}`);
+
         if (!grokResponse.ok) {
+            const errorBody = await grokResponse.text();
+            console.error(`❌ Grok API error ${grokResponse.status}:`, errorBody);
             throw new Error(`Grok API error: ${grokResponse.statusText}`);
         }
 
         const grokData = await grokResponse.json();
+
+        // Debug: Log model used in response
+        console.log(`\n📊 RESPONSE DEBUG:`);
+        console.log(`   Model used: ${grokData.model || 'not specified'}`);
+        console.log(`   Total tokens: ${grokData.usage?.total_tokens || 'unknown'}`);
+        console.log(`   Completion tokens: ${grokData.usage?.completion_tokens || 'unknown'}`);
+
         const grokContent = grokData.choices[0]?.message?.content;
 
         if (!grokContent) {
             throw new Error('Empty response from Grok');
         }
 
-        console.log('📨 Grok response:', grokContent);
+        console.log('📨 Grok response length:', grokContent.length, 'characters');
 
         // Parse the response
         let sources;
@@ -134,9 +157,16 @@ If you cannot find 20 credible URLs, return fewer rather than making up fake URL
         }
 
         // Validate URLs before saving
-        console.log('🔍 Validating URLs...');
+        console.log('\n🔍 URL VALIDATION DEBUG:');
+        console.log(`   Starting validation of ${sources.length} URLs...`);
+        const validationStartTime = Date.now();
+
         const validatedSources = await validateURLs(sources);
-        console.log(`✅ ${validatedSources.length}/${sources.length} URLs are valid`);
+
+        const validationTime = Date.now() - validationStartTime;
+        console.log(`✅ Validation complete in ${validationTime}ms`);
+        console.log(`   Valid URLs: ${validatedSources.length}/${sources.length}`);
+        console.log(`   Success rate: ${((validatedSources.length / sources.length) * 100).toFixed(1)}%`);
 
         if (validatedSources.length === 0) {
             return res.status(500).json({
@@ -218,10 +248,28 @@ If you cannot find 20 credible URLs, return fewer rather than making up fake URL
         console.log('✅ Sources updated successfully in database');
         console.log('📊 Update result:', updateResult);
 
+        const totalTime = Date.now() - startTime;
+        console.log(`\n🎉 TOTAL TIME: ${totalTime}ms (${(totalTime / 1000).toFixed(2)}s)`);
+        console.log(`   Breakdown:`);
+        console.log(`   - Grok API: ${responseTime}ms`);
+        console.log(`   - URL validation: ${validationTime}ms`);
+        console.log(`   - Database update: ${totalTime - responseTime - validationTime}ms`);
+        console.log(`\n✅ SUCCESS: Generated ${validatedSources.length} verified sources\n`);
+
         res.json({
             success: true,
             sources: validatedSources,
-            message: `Generated ${validatedSources.length} verified sources`
+            message: `Generated ${validatedSources.length} verified sources`,
+            debug: {
+                model_used: modelToUse,
+                response_time_ms: responseTime,
+                validation_time_ms: validationTime,
+                total_time_ms: totalTime,
+                sources_requested: 20,
+                sources_returned: sources.length,
+                sources_valid: validatedSources.length,
+                success_rate: `${((validatedSources.length / sources.length) * 100).toFixed(1)}%`
+            }
         });
 
     } catch (error) {

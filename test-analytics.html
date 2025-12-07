@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Analytics Chart</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: monospace;
+            padding: 20px;
+        }
+        #chart-container {
+            width: 800px;
+            height: 400px;
+            margin: 50px auto;
+            border: 1px solid #fff;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+    </style>
+    <script src="libs/chart.js"></script>
+</head>
+<body>
+    <h1>Test Truth Score Chart</h1>
+    <div id="chart-container">
+        <canvas id="truth-score-chart"></canvas>
+    </div>
+
+    <script>
+        // Sample data matching Supabase structure
+        const testMessages = [
+            {
+                id: "1",
+                speaker_display_name: "Speaker A",
+                speaker_username: "speakerA",
+                content: "Chocolate is toxic to dogs",
+                sequence_number: 1,
+                truth_score: 10
+            },
+            {
+                id: "2",
+                speaker_display_name: "Speaker B",
+                speaker_username: "speakerB",
+                content: "Dogs can eat chocolate safely",
+                sequence_number: 2,
+                truth_score: 1
+            },
+            {
+                id: "3",
+                speaker_display_name: "Speaker A",
+                speaker_username: "speakerA",
+                content: "What about cats?",
+                sequence_number: 3,
+                truth_score: null // No factual claim
+            },
+            {
+                id: "4",
+                speaker_display_name: "Speaker B",
+                speaker_username: "speakerB",
+                content: "Vaccines are important",
+                sequence_number: 4,
+                truth_score: 9
+            },
+            {
+                id: "5",
+                speaker_display_name: "Speaker A",
+                speaker_username: "speakerA",
+                content: "Water is H2O",
+                sequence_number: 5,
+                truth_score: 10
+            },
+            {
+                id: "6",
+                speaker_display_name: "Speaker B",
+                speaker_username: "speakerB",
+                content: "The earth is flat",
+                sequence_number: 6,
+                truth_score: 1
+            },
+            {
+                id: "7",
+                speaker_display_name: "Speaker A",
+                speaker_username: "speakerA",
+                content: "Exercise is healthy",
+                sequence_number: 7,
+                truth_score: 9
+            }
+        ];
+
+        // Chart rendering function (copied from analytics.js)
+        function renderChart(messages) {
+            const ctx = document.getElementById('truth-score-chart').getContext('2d');
+
+            console.log('Rendering chart with messages:', messages);
+
+            const speakers = {};
+
+            messages.forEach((m, globalIndex) => {
+                const speakerName = m.speaker_display_name || m.speaker_username || 'Unknown Speaker';
+
+                if (!speakers[speakerName]) {
+                    speakers[speakerName] = {
+                        dataPoints: [],
+                        color: null
+                    };
+                }
+
+                if (m.truth_score !== null && m.truth_score !== undefined) {
+                    speakers[speakerName].dataPoints.push({
+                        x: m.sequence_number || globalIndex,
+                        y: m.truth_score
+                    });
+                }
+            });
+
+            const validSpeakers = Object.keys(speakers).filter(
+                speaker => speakers[speaker].dataPoints.length > 0
+            );
+
+            console.log('Valid speakers with data:', validSpeakers);
+            console.log('Speaker data:', speakers);
+
+            const colors = ['#00ff00', '#ff00ff', '#00ffff', '#ffd700', '#ff4444'];
+            const datasets = [];
+
+            validSpeakers.forEach((speaker, idx) => {
+                const color = colors[idx % colors.length];
+                const speakerData = speakers[speaker].dataPoints;
+
+                speakerData.sort((a, b) => a.x - b.x);
+
+                datasets.push({
+                    label: speaker,
+                    data: speakerData,
+                    borderColor: color,
+                    backgroundColor: color,
+                    borderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    fill: false,
+                    tension: 0.2,
+                    showLine: true
+                });
+            });
+
+            console.log('Chart datasets:', datasets);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#fff',
+                                font: { family: 'monospace', size: 11 }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'MESSAGE SEQUENCE',
+                                color: '#999'
+                            },
+                            grid: { color: '#333' },
+                            ticks: { color: '#999', stepSize: 1 }
+                        },
+                        y: {
+                            min: 0,
+                            max: 10,
+                            title: {
+                                display: true,
+                                text: 'TRUTH SCORE',
+                                color: '#999'
+                            },
+                            grid: { color: '#333' },
+                            ticks: {
+                                color: '#999',
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return value + '/10';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Render the chart with test data
+        renderChart(testMessages);
+    </script>
+</body>
+</html>
