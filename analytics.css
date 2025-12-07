@@ -1,46 +1,642 @@
-/* Veritas Analytics Styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+:root {
+    --bg-color: #000000;
+    --text-color: #ffffff;
+    --border-color: #333333;
+    --accent-color: #ffffff;
+    --success-color: #00ba7c;
+    --warning-color: #ffd400;
+    --danger-color: #f91880;
+    --font-mono: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
 }
 
 body {
-    font-family: 'SF Mono', Monaco, monospace;
-    background: #000;
-    color: #fff;
-    padding: 20px;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-mono);
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+/* Hide scrollbar for Chrome/Safari/Opera */
+body::-webkit-scrollbar {
+    display: none;
 }
 
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
+/* Header */
 header {
-    margin-bottom: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding-bottom: 20px;
-    border-bottom: 1px solid #333;
-}
-
-header h1 {
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-
-header p {
-    color: #666;
-    font-size: 12px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.divider {
+    color: #666;
+}
+
+.space-title {
+    color: #999;
+    font-size: 14px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--success-color);
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.score-display {
+    font-size: 24px;
+    font-weight: 400;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+    flex-grow: 1;
+    min-height: 0;
+    /* Important for nested scrolling */
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;  /* Increased gap for better visual separation */
+}
+
+/* Widgets */
+.widget {
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    background: #000;
+}
+
+.timeline-widget {
+    grid-row: 1 / span 2;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.stats-widget {
+    height: 300px;
+    min-height: 200px;
+    resize: vertical;
+    overflow: hidden;
+}
+
+/* Chart Styles */
+#truth-score-chart {
+    cursor: crosshair;
+}
+
+.details-widget {
+    flex-grow: 1;
+    min-height: 200px;
+}
+
+.widget-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.widget-header h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    color: #999;
+}
+
+.widget-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.widget-controls button {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.widget-controls button:hover {
+    background: #fff;
+    color: #000;
+}
+
+.widget-content {
+    flex-grow: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Timeline specific */
+.timeline-widget .widget-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#timeline-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Details specific */
+#node-details {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.placeholder-text {
+    color: #666;
+    text-align: center;
+    margin-top: 40px;
+    font-size: 12px;
+}
+
+.detail-item {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #1a1a1a;
+}
+
+.detail-item:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    font-size: 10px;
+    color: #666;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.detail-value {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.detail-value.quote {
+    border-left: 2px solid var(--border-color);
+    padding-left: 12px;
+    font-style: italic;
+}
+
+/* Average Score Widget Styling */
+.average-score-widget {
+    min-height: 100px;
+    height: 110px;  /* Increased height to fill more space */
+    margin-bottom: 0;  /* No extra margin - rely on sidebar gap */
+}
+
+.average-score-widget .widget-content {
+    padding: 20px 15px 35px 15px;  /* Much more padding at bottom to extend the box */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;  /* Align content to top */
+    height: calc(100% - 40px);  /* Account for header height */
+}
+
+.score-comparison {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    font-family: var(--font-mono);
+}
+
+.speaker-score {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0 5px;
+}
+
+.speaker-name {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+}
+
+.speaker-avg-score {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.speaker-avg-score.high-score {
+    color: #00ba7c; /* Veritas green */
+}
+
+.speaker-avg-score.low-score {
+    color: #8b0000; /* Dark red */
+}
+
+.speaker-avg-score.medium-score {
+    color: #cc9900; /* Dark gold */
+}
+
+.score-divider {
+    color: #333;
+    font-size: 20px;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+/* Loading state for average scores */
+.average-score-widget.loading .speaker-avg-score {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+
+/* Claims list styling */
+.claims-list {
+    margin-top: 12px;
+}
+
+.claim-detail {
+    background: rgba(255, 255, 255, 0.02);
+    transition: all 0.2s ease;
+}
+
+.claim-detail:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Sources list styling */
+.sources-list {
+    margin-top: 8px;
+    padding-right: 8px;
+}
+
+.sources-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sources-list::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.sources-list::-webkit-scrollbar-thumb {
+    background: #444;
+}
+
+.sources-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.dive-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1px solid var(--text-color);
+    color: var(--text-color);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.2s;
+}
+
+.dive-btn:hover {
+    background: var(--text-color);
+    color: var(--bg-color);
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    background: #000;
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Consistency Modal Specific Styles */
+.consistency-modal-content {
+    width: 60%;
+    max-width: 800px;
+    height: auto;
+    max-height: 80%;
+    min-height: 400px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
     letter-spacing: 0.1em;
 }
 
-#chart-container,
-#timeline-container,
-#details-panel {
-    background: #000;
-    border: 1px solid #333;
+.close-modal {
+    background: transparent;
+    border: none;
+    color: #999;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 8px;
+    transition: color 0.2s;
+}
+
+.close-modal:hover {
+    color: #fff;
+}
+
+/* Split View Modal */
+.modal-body {
+    display: flex;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+/* Consistency Modal Body Container */
+.consistency-modal-content .modal-body {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* Consistency Modal Body Styles */
+.consistency-modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    overflow-y: auto;
+    font-family: var(--font-mono);
+    color: #e7e9ea;
+    line-height: 1.6;
+    min-height: 300px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.consistency-modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.consistency-modal-body::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+.consistency-modal-body::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 3px;
+}
+
+/* Loading Spinner for Consistency Modal */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    color: #999;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.loading-spinner > div:last-child {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.loading-text {
+    font-size: 14px;
+    color: #999;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #333;
+    border-top-color: #00ba7c;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;  /* Center the spinner */
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.graph-pane {
+    flex: 2;
+    border-right: 1px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.details-pane {
+    flex: 1;
+    background: #0a0a0a;
     padding: 20px;
+    overflow-y: auto;
+    min-width: 300px;
+}
+
+.details-placeholder {
+    color: #666;
+    text-align: center;
+    margin-top: 100px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+
+/* Tweet Card in Details Pane */
+.tweet-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    padding: 15px;
     margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.tweet-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 11px;
+}
+
+.tweet-author {
+    font-weight: bold;
+    color: #fff;
+}
+
+.tweet-handle {
+    color: #666;
+}
+
+.tweet-content {
+    font-size: 13px;
+    line-height: 1.4;
+    color: #e7e9ea;
+    margin-bottom: 12px;
+}
+
+.tweet-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 10px;
+    color: #666;
+    border-top: 1px solid #333;
+    padding-top: 10px;
+}
+
+/* Multi-topic Timeline Styles */
+.timeline-lane {
+    transition: opacity 0.3s ease;
+}
+
+.timeline-lane.dimmed {
+    opacity: 0.1;
+}
+
+.timeline-lane:hover {
+    opacity: 1 !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666;
 }
