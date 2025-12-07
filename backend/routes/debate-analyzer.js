@@ -170,15 +170,9 @@ router.post('/analyze-transcript', async (req, res) => {
                 console.log('Calling Grok API...');
                 const startTime = Date.now();
 
-<<<<<<< HEAD
-                // Call Grok with the entire debate at once - with 60 second timeout
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 300000); // 300 second timeout (5 mins)
-=======
                 // Call Grok with the entire debate at once - with extended timeout for best model
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 600000); // 600 second timeout (10 mins)
->>>>>>> origin/main
 
                 const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
                     method: 'POST',
@@ -188,66 +182,6 @@ router.post('/analyze-transcript', async (req, res) => {
                     },
                     signal: controller.signal,
                     body: JSON.stringify({
-<<<<<<< HEAD
-                        model: 'grok-4-1-fast-reasoning',
-                        messages: [
-                            {
-                                role: 'system',
-                                content: `You are analyzing a political debate. For each speaker's statement, extract factual claims and fact-check them.
-
-INSTRUCTIONS:
-1. Process each speaker's statement separately
-2. Extract ALL verifiable factual claims
-3. Assign a truth score (1-10) for each statement based on its claims
-4. Provide a brief verdict and explanation
-5. Include authoritative sources/URLs for fact-checking
-6. Skip moderator questions/comments
-
-IMPORTANT JSON FORMATTING RULES:
-- Output STRICTLY VALID JSON.
-- ESCAPE ALL DOUBLE QUOTES within strings (e.g., "He said \\"hello\\"").
-- Do not use markdown formatting (no \`\`\`json blocks).
-- Do not include any text outside the JSON object.
-
-IMPORTANT - Use ONLY these verdict values:
-- TRUE (score 8-10)
-- MOSTLY TRUE (score 6-7)
-- MIXED (score 4-5)
-- MOSTLY FALSE (score 2-3)
-- FALSE (score 1)
-- UNVERIFIABLE (when claims cannot be verified)
-
-Return a SINGLE JSON object containing a 'messages' array:
-                            {
-                              "messages": [
-                                {
-                                  "speaker": "Speaker Name",
-                                  "content": "Their statement",
-                                  "sequence_number": 1,
-                                  "truth_score": 7,
-                                  "verdict": "MOSTLY TRUE",
-                                  "explanation": "Brief fact-check summary",
-                                  "claims": [
-                                    {
-                                      "text": "Specific claim from the statement",
-                                      "score": 8,
-                                      "sources": [
-                                        "https://www.cdc.gov/...",
-                                        "https://www.factcheck.org/...",
-                                        "https://grokipedia.com/..."
-                                      ],
-                                      "verdict": "TRUE/FALSE/MIXED/UNVERIFIABLE",
-                                      "explanation": "Why this is true/false with specific data/facts"
-                                    }
-                                  ]
-                                }
-                              ],
-                              "overall_credibility": {
-                                "Kamala Harris": 75,
-                                "Donald Trump": 65
-                              }
-                            }`
-=======
                         model: 'grok-4-0709', // Best model for maximum accuracy
                         messages: [
                             {
@@ -365,20 +299,14 @@ Output STRICTLY VALID JSON:
     "Speaker 2": 45
   }
 }`
->>>>>>> origin/main
                             },
                             {
                                 role: 'user',
                                 content: `Analyze this debate transcript:\n\n${debateDialogue}`
                             }
                         ],
-<<<<<<< HEAD
-                        temperature: 0.1, // Lower temperature for more consistent formatting
-                        max_tokens: 8000  // Increased for longer debates
-=======
                         temperature: 0.2, // Balanced for accuracy and consistency
                         max_tokens: 16000  // Increased for comprehensive analysis
->>>>>>> origin/main
                     })
                 });
 
@@ -638,12 +566,8 @@ Output STRICTLY VALID JSON:
             grok_analysis_completed: grokAnalysis !== null,
             overall_score: averageScore,
             debug_info: debugInfo,
-<<<<<<< HEAD
-            expected_messages: parsedMessages.length
-=======
             expected_messages: parsedMessages.length,
             grok_full_response: grokAnalysis  // Full Grok response for debugging
->>>>>>> origin/main
         });
 
     } catch (error) {
@@ -862,7 +786,6 @@ router.get('/debate-results/:space_id', async (req, res) => {
 
 /**
  * Analyze consistency with past statements
-<<<<<<< HEAD
  * Aggregates data from X timeline + web search before Grok analysis
  */
 router.post('/consistency', async (req, res) => {
@@ -1148,15 +1071,6 @@ Return JSON with score, x_score, web_score, verdict, analysis (100-150 words ref
 Current claim by ${speaker}: "${claim}"
 Note: No X timeline data available. Use your knowledge of ${speaker}'s public record but indicate lower confidence.
 If you don't have knowledge of ${speaker}'s past statements on this topic, return "Insufficient Data".`;
-=======
- */
-router.post('/consistency', async (req, res) => {
-    try {
-        const { speaker, claim, topic } = req.body;
-
-        // In a real app, we would search a vector DB of past tweets.
-        // Here, we'll use Grok to simulate the analysis based on its knowledge base.
->>>>>>> origin/main
 
         const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
             method: 'POST',
@@ -1169,7 +1083,6 @@ router.post('/consistency', async (req, res) => {
                 messages: [
                     {
                         role: 'system',
-<<<<<<< HEAD
                         content: `You analyze whether a SPEAKER's current claim is consistent with THEIR OWN past statements.
 
 IMPORTANT: You are checking if THIS PERSON (the speaker) has been consistent with their OWN past positions, NOT whether the claim is true or supported by others.
@@ -1199,26 +1112,6 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
                     {
                         role: 'user',
                         content: analysisPrompt
-=======
-                        content: `You are a political analyst checking for consistency.
-                        
-                        Analyze the consistency of the speaker's current claim with their known past positions/tweets.
-                        
-                        Return JSON:
-                        {
-                            "score": 1-10 (10 = perfectly consistent),
-                            "verdict": "Consistent" | "Evolving" | "Contradictory",
-                            "analysis": "Brief explanation...",
-                            "past_tweets": [
-                                { "date": "Approx Date", "text": "A representative past statement..." },
-                                { "date": "Approx Date", "text": "Another past statement..." }
-                            ]
-                        }`
-                    },
-                    {
-                        role: 'user',
-                        content: `Speaker: ${speaker}\nTopic: ${topic}\nCurrent Claim: "${claim}"`
->>>>>>> origin/main
                     }
                 ],
                 temperature: 0.1
@@ -1228,7 +1121,6 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
         const data = await grokResponse.json();
         const content = data.choices[0]?.message?.content;
 
-<<<<<<< HEAD
         // Robust JSON extraction with error handling
         let result;
         try {
@@ -1314,11 +1206,6 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
         result.data_source = dataSource;
 
         console.log(`Consistency analysis complete: ${result.verdict} (${result.score}/10) from ${dataSource}`);
-=======
-        // Extract JSON
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 5, verdict: "Unknown", analysis: "Could not parse analysis", past_tweets: [] };
->>>>>>> origin/main
 
         res.json({ success: true, ...result });
 
