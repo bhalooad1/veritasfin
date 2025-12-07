@@ -105,10 +105,8 @@ header {
 }
 
 .score-display {
-    font-size: 20px;
-    font-weight: 500;
-    font-family: var(--font-mono);
-    letter-spacing: -0.02em;
+    font-size: 24px;
+    font-weight: 400;
 }
 
 /* Dashboard Grid */
@@ -118,14 +116,14 @@ header {
     gap: 20px;
     flex-grow: 1;
     min-height: 0;
-    /* Important for nested scrolling */
+    /* Timeline and sidebar will share same rows for perfect alignment */
 }
 
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    /* Increased gap for better visual separation */
+    gap: 15px;  /* Increased gap for better visual separation */
+    align-self: start; /* Don't stretch to fill available space */
 }
 
 /* Widgets */
@@ -137,11 +135,12 @@ header {
 }
 
 .timeline-widget {
-    grid-row: 1 / span 2;
-    height: 600px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Stretch to bottom of viewport with 20px gap */
+    height: calc(100vh - 160px);
+    align-self: start;
 }
 
 .stats-widget {
@@ -157,8 +156,8 @@ header {
 }
 
 .details-widget {
-    flex-grow: 1;
     min-height: 200px;
+    /* Don't use flex-grow - let content determine height */
 }
 
 .widget-header {
@@ -263,21 +262,16 @@ header {
 /* Average Score Widget Styling */
 .average-score-widget {
     min-height: 100px;
-    height: 110px;
-    /* Increased height to fill more space */
-    margin-bottom: 0;
-    /* No extra margin - rely on sidebar gap */
+    height: 110px;  /* Increased height to fill more space */
+    margin-bottom: 0;  /* No extra margin - rely on sidebar gap */
 }
 
 .average-score-widget .widget-content {
-    padding: 20px 15px 35px 15px;
-    /* Much more padding at bottom to extend the box */
+    padding: 20px 15px 35px 15px;  /* Much more padding at bottom to extend the box */
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    /* Align content to top */
-    height: calc(100% - 40px);
-    /* Account for header height */
+    justify-content: flex-start;  /* Align content to top */
+    height: calc(100% - 40px);  /* Account for header height */
 }
 
 .score-comparison {
@@ -316,18 +310,15 @@ header {
 }
 
 .speaker-avg-score.high-score {
-    color: #00ba7c;
-    /* Veritas green */
+    color: #00ba7c; /* Veritas green */
 }
 
 .speaker-avg-score.low-score {
-    color: #8b0000;
-    /* Dark red */
+    color: #8b0000; /* Dark red */
 }
 
 .speaker-avg-score.medium-score {
-    color: #cc9900;
-    /* Dark gold */
+    color: #cc9900; /* Dark gold */
 }
 
 .score-divider {
@@ -343,15 +334,8 @@ header {
 }
 
 @keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 0.3;
-    }
-
-    50% {
-        opacity: 1;
-    }
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
 }
 
 /* Claims list styling */

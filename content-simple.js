@@ -416,13 +416,72 @@ console.log('Veritas: Initializing with overlay...');
 createOverlay();
 startMonitoring();
 
+// Create space immediately if on a Space page
+if (window.location.href.includes('/spaces/')) {
+  console.log('Veritas: On Space page - creating space session...');
+  ensureSpaceExists().then(spaceId => {
+    if (spaceId) {
+      console.log('✅ Veritas: Space session ready for end detection');
+    } else {
+      console.warn('⚠️  Veritas: Failed to create space session');
+    }
+  });
+}
+
+// Extract the hosting tweet URL for this Space
+function getSpaceTweetUrl() {
+  console.log('Veritas DEBUG: Extracting tweet URL for Space...');
+  console.log('Veritas DEBUG: Current URL:', window.location.href);
+
+  // Look for article elements that contain a Space link
+  const articles = document.querySelectorAll('article');
+  console.log(`Veritas DEBUG: Found ${articles.length} articles on page`);
+
+  // Find all articles with Space links
+  const spaceTweets = [];
+  for (const article of articles) {
+    const spaceLink = article.querySelector('a[href*="/i/spaces/"]');
+    if (spaceLink) {
+      const tweetLink = article.querySelector('a[href*="/status/"]');
+      if (tweetLink) {
+        // Get full URL (handle both relative and absolute URLs)
+        let tweetUrl = tweetLink.href;
+        if (!tweetUrl.startsWith('http')) {
+          tweetUrl = 'https://x.com' + tweetUrl;
+        }
+
+        spaceTweets.push({
+          article,
+          spaceUrl: spaceLink.href,
+          tweetUrl: tweetUrl
+        });
+        console.log(`Veritas DEBUG: Found Space tweet #${spaceTweets.length}:`, tweetUrl);
+      }
+    }
+  }
+
+  console.log(`Veritas DEBUG: Total tweets with Space links: ${spaceTweets.length}`);
+
+  if (spaceTweets.length > 0) {
+    // Return the FIRST one (topmost/most recent on Twitter)
+    const mostRecent = spaceTweets[0];
+    console.log('✅ Veritas: Using topmost Space tweet URL:', mostRecent.tweetUrl);
+    console.log('   Space link:', mostRecent.spaceUrl);
+    return mostRecent.tweetUrl;
+  }
+
+  // Fallback to space URL if tweet not found
+  console.log('⚠️  Veritas: Could not find hosting tweet, using current URL');
+  return window.location.href;
+}
+
 // Create space automatically on first caption
 async function ensureSpaceExists() {
   if (currentSpace) return currentSpace.id;
 
   try {
     console.log('Veritas DEBUG: Creating space at', `${BACKEND_URL}/spaces/create`);
-    const spaceUrl = window.location.href;
+    const spaceUrl = getSpaceTweetUrl();
 
     const response = await fetch(`${BACKEND_URL}/spaces/create`, {
       method: 'POST',
@@ -443,6 +502,11 @@ async function ensureSpaceExists() {
       title: 'Twitter Space',
       url: spaceUrl
     };
+
+    // Store space ID for space-end-detector
+    chrome.storage.local.set({ currentSpaceId: currentSpace.id }, () => {
+      console.log('✓ Veritas: Space ID stored for end detection:', currentSpace.id);
+    });
 
     console.log('✓ Veritas: Space created:', currentSpace.id);
     return currentSpace.id;

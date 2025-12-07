@@ -193,15 +193,15 @@ function renderTimeline(messages) {
         min-height: 100%;
     `;
 
-    // Add vertical line with subtle design
+    // Add vertical line - minimal design
     const verticalLine = document.createElement('div');
     verticalLine.style.cssText = `
         position: absolute;
         left: 50%;
-        top: 20px;
-        bottom: 20px;
+        top: 0;
+        bottom: 0;
         width: 1px;
-        background: #1a1a1a;
+        background: #333;
         transform: translateX(-50%);
     `;
     timeline.appendChild(verticalLine);
@@ -229,70 +229,41 @@ function renderTimeline(messages) {
             ${isLeft ? 'flex-direction: row' : 'flex-direction: row-reverse'};
         `;
 
-        // Timeline dot - color coded
+        // Timeline dot - minimal, color coded
         const timelineDot = document.createElement('div');
         timelineDot.className = 'timeline-dot';
         const dotColor = getScoreColor(message.truth_score);
         timelineDot.style.cssText = `
             position: absolute;
             left: 50%;
-            top: 24px;
-            width: 14px;
-            height: 14px;
+            top: 20px;
+            width: 8px;
+            height: 8px;
             background: ${dotColor};
-            border: 2px solid #000;
+            border: 1px solid #333;
             border-radius: 50%;
             transform: translateX(-50%);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 3;
             cursor: pointer;
-            box-shadow: 0 0 8px ${dotColor}40;
         `;
 
         // No connector line - cleaner look
 
-        // Message card - color coded with gradient
+        // Message card - minimal, monospace, on-brand
         const card = document.createElement('div');
         const cardColor = getScoreColor(message.truth_score);
         card.style.cssText = `
-            width: 380px;
-            ${isLeft ? 'margin-right: 40px' : 'margin-left: 40px'};
-            background: #050505;
-            border-left: 3px solid ${cardColor};
-            border-radius: 0;
-            padding: 20px 24px;
+            width: 360px;
+            ${isLeft ? 'margin-right: 30px' : 'margin-left: 30px'};
+            background: #000;
+            border: 1px solid #333;
+            border-left: 2px solid ${cardColor};
+            padding: 16px;
             position: relative;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
-            background: linear-gradient(90deg, ${cardColor}08 0%, transparent 50%);
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 11px;
         `;
-
-        // Subtle hover effect with color
-        card.onmouseenter = () => {
-            card.style.transform = 'translateX(' + (isLeft ? '-4px' : '4px') + ')';
-            card.style.background = `linear-gradient(90deg, ${cardColor}15 0%, transparent 50%)`;
-            card.style.boxShadow = `0 4px 12px ${cardColor}20`;
-            card.style.borderLeftWidth = '4px';
-            // Subtle dot animation
-            const dot = messageBlock.querySelector('.timeline-dot');
-            if (dot) {
-                dot.style.transform = 'translateX(-50%) scale(1.4)';
-                dot.style.boxShadow = `0 0 16px ${cardColor}60`;
-            }
-        };
-        card.onmouseleave = () => {
-            card.style.transform = 'translateX(0)';
-            card.style.background = `linear-gradient(90deg, ${cardColor}08 0%, transparent 50%)`;
-            card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.4)';
-            card.style.borderLeftWidth = '3px';
-            // Reset timeline dot
-            const dot = messageBlock.querySelector('.timeline-dot');
-            if (dot) {
-                dot.style.transform = 'translateX(-50%) scale(1)';
-                dot.style.boxShadow = `0 0 8px ${cardColor}40`;
-            }
-        };
 
         // Card click handler - use same details panel as graph
         card.onclick = () => showChartPointDetails(message);
@@ -308,12 +279,11 @@ function renderTimeline(messages) {
 
         const speakerName = document.createElement('div');
         speakerName.style.cssText = `
-            font-size: 11px;
-            font-weight: 600;
-            color: #888;
+            font-size: 10px;
+            font-weight: 500;
+            color: #666;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            letter-spacing: 0.1em;
         `;
         speakerName.textContent = speaker;
 
@@ -329,19 +299,18 @@ function renderTimeline(messages) {
         speakerInfo.appendChild(messageNumber);
         card.appendChild(speakerInfo);
 
-        // Message content - clean typography
+        // Message content - monospace
         const messageContent = document.createElement('div');
         messageContent.style.cssText = `
-            font-size: 14px;
-            color: #c8c8c8;
-            line-height: 1.5;
-            margin-bottom: 16px;
-            max-height: 60px;
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            max-height: 75px;
             overflow: hidden;
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
         messageContent.textContent = message.content || message.text || '';
         card.appendChild(messageContent);
@@ -352,8 +321,8 @@ function renderTimeline(messages) {
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            padding-top: 12px;
-            border-top: 1px solid #1a1a1a;
+            padding-top: 8px;
+            border-top: 1px solid #222;
         `;
 
         // Truth score - clean and minimal
@@ -366,36 +335,33 @@ function renderTimeline(messages) {
 
         const scoreValue = document.createElement('span');
         scoreValue.style.cssText = `
-            font-size: 20px;
-            font-weight: 300;
+            font-size: 18px;
+            font-weight: 400;
             color: ${cardColor};
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
         `;
         scoreValue.textContent = message.truth_score !== null ? message.truth_score : '—';
 
         const scoreSlash = document.createElement('span');
         scoreSlash.style.cssText = `
-            font-size: 12px;
-            color: #444;
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+            font-size: 10px;
+            color: #555;
         `;
         scoreSlash.textContent = '/10';
 
         truthScore.appendChild(scoreValue);
         truthScore.appendChild(scoreSlash);
 
-        // Verdict - subtle with color hint
+        // Verdict - minimal badge
         const verdict = document.createElement('div');
         verdict.style.cssText = `
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 500;
-            color: ${cardColor}99;
+            color: ${cardColor};
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
-            padding: 2px 6px;
-            background: ${cardColor}10;
-            border-radius: 2px;
+            letter-spacing: 0.12em;
+            padding: 3px 8px;
+            border: 1px solid ${cardColor}40;
+            background: transparent;
         `;
         verdict.textContent = message.grok_verdict || '';
 
@@ -1180,6 +1146,10 @@ function showChartPointDetails(message) {
     // Parse the grok_response_raw to get detailed claims if available
     let claimsHTML = '';
 
+    console.log('Checking claims for message:', message.id);
+    console.log('grok_response_raw type:', typeof message.grok_response_raw);
+    console.log('grok_response_raw:', message.grok_response_raw);
+
     try {
         if (message.grok_response_raw) {
             let grokData = message.grok_response_raw;
@@ -1187,15 +1157,24 @@ function showChartPointDetails(message) {
             // Handle if it's already an object
             if (typeof grokData === 'object' && grokData !== null) {
                 // Already parsed
+                console.log('grokData is already an object:', grokData);
+                console.log('grokData.claims:', grokData.claims);
+                console.log('Is grokData an array?', Array.isArray(grokData));
             } else if (typeof grokData === 'string') {
                 // Parse once
+                console.log('Parsing grokData string...');
                 grokData = JSON.parse(grokData);
 
                 // Check if it's still a string (double-encoded)
                 if (typeof grokData === 'string') {
+                    console.log('Double-encoded, parsing again...');
                     grokData = JSON.parse(grokData);
                 }
             }
+
+            console.log('Final parsed grokData:', grokData);
+            console.log('Final grokData type:', typeof grokData);
+            console.log('Final grokData keys:', grokData ? Object.keys(grokData) : 'null');
 
             // Handle both formats:
             // 1. {claims: [...], summary: "...", truth_score: X}
@@ -1208,6 +1187,9 @@ function showChartPointDetails(message) {
             }
 
             // Build claims section if available
+            console.log('Claims array:', claimsArray);
+            console.log('Claims array length:', claimsArray ? claimsArray.length : 0);
+
             if (claimsArray && claimsArray.length > 0) {
                 // Store claims data for interaction
                 const claimsData = claimsArray.map((claim, idx) => ({
@@ -1215,16 +1197,19 @@ function showChartPointDetails(message) {
                     id: `claim-${message.id}-${idx}`
                 }));
 
+                console.log('Processing claims data:', claimsData);
+
                 // Store the grokData globally for access
                 window.currentGrokData = grokData;
                 window.currentMessageId = message.id;
 
                 claimsHTML = `
                 <div class="detail-item">
-                    <div class="detail-label">CLAIMS</div>
+                    <div class="detail-label">CLAIMS (${claimsData.length} found)</div>
                     <div class="claims-list">
                         ${claimsData.map((claim, idx) => {
                     const sourcesCount = claim.sources ? claim.sources.length : 0;
+                    console.log(`Processing claim ${idx}:`, claim.text, 'Score:', claim.score, 'Sources:', sourcesCount);
                     return `
                             <div class="claim-container" style="margin-bottom: 8px;">
                                 <div class="claim-detail"
@@ -1273,7 +1258,27 @@ function showChartPointDetails(message) {
                                     ` : ''}
                                     ${sourcesCount > 0 ? `
                                     <div style="padding-top: 4px;">
-                                        <div style="color: #999; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px;">SOURCES</div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <div style="color: #999; font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em;">SOURCES</div>
+                                            <button
+                                                class="generate-sources-btn"
+                                                data-message-id="${message.id}"
+                                                data-claim-index="${idx}"
+                                                data-claim-text="${claim.text.replace(/"/g, '&quot;')}"
+                                                style="background: #000;
+                                                       color: #fff;
+                                                       border: 1px solid #fff;
+                                                       padding: 4px 10px;
+                                                       font-size: 8px;
+                                                       font-weight: 600;
+                                                       text-transform: uppercase;
+                                                       letter-spacing: 0.05em;
+                                                       cursor: pointer;
+                                                       transition: all 0.2s ease;
+                                                       font-family: 'SF Mono', Monaco, monospace;">
+                                                Generate More
+                                            </button>
+                                        </div>
                                     </div>
                                     ` : ''}
                                     ${claim.sources ? claim.sources.map(source => {
@@ -1310,10 +1315,15 @@ function showChartPointDetails(message) {
 
                 // Store claims data globally for click handler
                 window.currentClaimsData = claimsData;
+                console.log('Generated claimsHTML length:', claimsHTML.length);
+            } else {
+                console.log('No claims found or empty claims array');
             }
+        } else {
+            console.log('No grok_response_raw field');
         }
     } catch (e) {
-        console.error('Error parsing grok response:', e);
+        console.error('Error parsing grok response:', e, e.stack);
     }
 
     container.innerHTML = `
@@ -1435,9 +1445,171 @@ function showChartPointDetails(message) {
             this.style.opacity = '0.8';
         });
     });
+
+    // Add handlers for "Generate More Sources" buttons
+    document.querySelectorAll('.generate-sources-btn').forEach(btn => {
+        btn.addEventListener('click', async function (e) {
+            e.stopPropagation();
+
+            const messageId = this.getAttribute('data-message-id');
+            const claimIndex = this.getAttribute('data-claim-index');
+            const claimText = this.getAttribute('data-claim-text');
+
+            // Pause polling to prevent race conditions
+            console.log('⏸️  Pausing auto-refresh during source generation');
+            if (window.pollInterval) {
+                clearInterval(window.pollInterval);
+            }
+
+            // Update button state to loading
+            const originalHTML = this.innerHTML;
+            const originalBackground = this.style.background;
+            const originalColor = this.style.color;
+            this.disabled = true;
+            this.style.opacity = '0.6';
+            this.style.cursor = 'not-allowed';
+            this.innerHTML = 'Generating...';
+
+            try {
+                const response = await fetch(`http://localhost:3000/api/claims/${messageId}/${claimIndex}/generate-sources`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        claimText: claimText
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('✅ Source generation successful!');
+                    console.log('📊 Response data:', data);
+                    console.log('🔗 New sources:', data.sources);
+
+                    // Success - flash white background and reload the details panel
+                    this.style.background = '#fff';
+                    this.style.color = '#000';
+                    this.style.border = '1px solid #000';
+                    this.innerHTML = 'Generated!';
+
+                    // Show success feedback
+                    setTimeout(async () => {
+                        console.log('🔄 Refreshing data from backend...');
+                        const spaceId = window.currentSpaceId || new URLSearchParams(window.location.search).get('spaceId');
+                        console.log('📍 Space ID:', spaceId);
+
+                        // Save which dropdowns are currently open
+                        const openDropdowns = new Set();
+                        document.querySelectorAll('.claim-sources').forEach(sourcesDiv => {
+                            if (sourcesDiv.style.display === 'block') {
+                                openDropdowns.add(sourcesDiv.id);
+                            }
+                        });
+                        console.log('💾 Saved open dropdowns:', Array.from(openDropdowns));
+
+                        // Re-fetch the message from backend to get updated sources
+                        const refreshResponse = await fetch(`http://localhost:3000/api/debate/debate-results/${spaceId}`);
+                        const refreshData = await refreshResponse.json();
+
+                        console.log('📥 Refresh response:', refreshData);
+
+                        if (refreshData.success) {
+                            console.log('🔍 Looking for message ID:', messageId);
+                            console.log('📋 Available messages:', refreshData.messages.map(m => m.id));
+
+                            // Find the updated message
+                            const updatedMessage = refreshData.messages.find(m => m.id === messageId);
+
+                            if (updatedMessage) {
+                                console.log('✅ Found updated message:', updatedMessage);
+                                console.log('🔗 Updated grok_response_raw:', updatedMessage.grok_response_raw);
+
+                                // Reload the details panel with updated data
+                                showChartPointDetails(updatedMessage);
+
+                                // Restore dropdown states after a brief delay (to let DOM update)
+                                setTimeout(() => {
+                                    openDropdowns.forEach(dropdownId => {
+                                        const dropdown = document.getElementById(dropdownId);
+                                        if (dropdown) {
+                                            dropdown.style.display = 'block';
+                                            // Also update the toggle arrow
+                                            const claimId = dropdownId.replace('sources-', '');
+                                            const toggle = document.querySelector(`#${claimId} .sources-toggle`);
+                                            if (toggle) {
+                                                toggle.innerHTML = toggle.innerHTML.replace('▼', '▲');
+                                            }
+                                        }
+                                    });
+                                    console.log('✅ Restored dropdown states');
+                                }, 100);
+
+                                // Resume polling
+                                console.log('▶️  Resuming auto-refresh');
+                                const finalSpaceId = window.currentSpaceId || new URLSearchParams(window.location.search).get('spaceId');
+                                window.pollInterval = setInterval(() => loadData(finalSpaceId), 3000);
+                            } else {
+                                console.error('❌ Message not found in refresh data');
+                            }
+                        } else {
+                            console.error('❌ Refresh failed:', refreshData);
+                        }
+                    }, 800);
+                } else {
+                    throw new Error(data.error || 'Failed to generate sources');
+                }
+            } catch (error) {
+                console.error('Error generating sources:', error);
+
+                // Show error state
+                this.style.background = '#dc2626';
+                this.style.color = '#fff';
+                this.style.border = '1px solid #dc2626';
+                this.innerHTML = 'Failed';
+
+                // Resume polling even on error
+                console.log('▶️  Resuming auto-refresh after error');
+                const spaceId = window.currentSpaceId || new URLSearchParams(window.location.search).get('spaceId');
+                window.pollInterval = setInterval(() => loadData(spaceId), 3000);
+
+                // Revert after delay
+                setTimeout(() => {
+                    this.disabled = false;
+                    this.style.opacity = '1';
+                    this.style.cursor = 'pointer';
+                    this.style.background = originalBackground;
+                    this.style.color = originalColor;
+                    this.style.border = '1px solid #fff';
+                    this.innerHTML = originalHTML;
+                }, 2000);
+            }
+        });
+
+        // Hover effects
+        btn.addEventListener('mouseenter', function () {
+            if (!this.disabled) {
+                this.style.background = '#fff';
+                this.style.color = '#000';
+            }
+        });
+        btn.addEventListener('mouseleave', function () {
+            if (!this.disabled) {
+                this.style.background = '#000';
+                this.style.color = '#fff';
+            }
+        });
+    });
 }
 
 // Helper function to get color based on score
+function getScoreColor(score) {
+    if (score === null || score === undefined) return '#71767b';
+    if (score >= 8) return '#00ba7c';  // Green
+    if (score >= 5) return '#fbbf24';  // Yellow
+    return '#dc2626';  // Red
+}
 
 // Helper function to get verdict color
 function getVerdictColor(verdict) {

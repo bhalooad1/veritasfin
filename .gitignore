@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 npm-debug.log*
@@ -29,3 +30,10 @@ logs/
 # Chrome extension package
 *.crx
 *.pem
+=======
+node_modules/
+.env
+.env.local
+.DS_Store
+*.log
+>>>>>>> origin/main
