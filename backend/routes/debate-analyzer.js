@@ -3,10 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import DebateParser from '../debate-parser.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
-<<<<<<< HEAD
 import twitterService from '../services/twitter.js';
-=======
->>>>>>> origin/main
 
 // Load environment variables
 dotenv.config();
