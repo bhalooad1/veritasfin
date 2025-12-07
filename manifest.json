@@ -1,0 +1,78 @@
+{
+  "manifest_version": 3,
+  "name": "Veritas - Twitter Spaces Fact Checker",
+  "version": "1.0.0",
+  "description": "Real-time fact checking for Twitter Spaces with credibility scoring",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://twitter.com/*",
+    "https://x.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": [
+        "content-simple.js"
+      ],
+      "css": [
+        "overlay.css"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.grokipedia.com/*",
+        "*://grokipedia.com/*"
+      ],
+      "js": [
+        "grokipedia-content.js"
+      ]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icon.png",
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "v_icon.png",
+        "v_icon16.png",
+        "v_icon48.png",
+        "v_icon128.png",
+        "analytics.html",
+        "analytics.css",
+        "analytics.js",
+        "process-debate.html",
+        "process-debate.js",
+        "libs/d3.v7.min.js",
+        "libs/chart.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

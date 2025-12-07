@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VERITAS ANALYTICS</title>
+    <link rel="stylesheet" href="analytics.css">
+    <script src="libs/d3.v7.min.js"></script>
+    <script src="libs/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <div class="logo">VERITAS</div>
+                <div class="divider">/</div>
+                <div id="space-title" class="space-title">LOADING...</div>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    LIVE
+                </div>
+                <div id="overall-score" class="score-display">--</div>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <section class="widget timeline-widget">
+                <div class="widget-header">
+                    <h3>CONVERSATION TIMELINE</h3>
+                    <div class="widget-controls">
+                        <button id="zoom-in">+</button>
+                        <button id="zoom-out">-</button>
+                        <button id="reset-zoom">R</button>
+                    </div>
+                </div>
+                <div class="widget-content" id="timeline-container"></div>
+            </section>
+
+            <aside class="sidebar">
+                <!-- Average Truth Score Comparison Box -->
+                <section class="widget average-score-widget" id="average-score-widget">
+                    <div class="widget-header">
+                        <h3>AVERAGE TRUTH SCORE</h3>
+                    </div>
+                    <div class="widget-content" id="average-scores">
+                        <div class="score-comparison">
+                            <div class="speaker-score" id="speaker1-avg">
+                                <span class="speaker-name">--</span>
+                                <span class="speaker-avg-score">--</span>
+                            </div>
+                            <div class="score-divider">|</div>
+                            <div class="speaker-score" id="speaker2-avg">
+                                <span class="speaker-name">--</span>
+                                <span class="speaker-avg-score">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="widget stats-widget">
+                    <div class="widget-header">
+                        <h3>GRAPH</h3>
+                    </div>
+                    <div class="widget-content">
+                        <canvas id="truth-score-chart"></canvas>
+                    </div>
+                </section>
+
+                <section class="widget details-widget" id="details-widget">
+                    <div class="widget-header">
+                        <h3>DETAILS</h3>
+                    </div>
+                    <div class="widget-content" id="node-details">
+                        <div class="placeholder-text">SELECT A NODE TO VIEW DETAILS</div>
+                    </div>
+                </section>
+            </aside>
+        </main>
+
+        <div id="propagation-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>PROPAGATION GRAPH</h3>
+                    <button class="close-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="propagation-graph" class="graph-pane"></div>
+                    <div id="propagation-details" class="details-pane">
+                        <div class="details-placeholder">SELECT A NODE TO VIEW DETAILS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consistency Analysis Modal -->
+        <div id="consistency-modal" class="modal">
+            <div class="modal-content consistency-modal-content">
+                <div class="modal-header">
+                    <h3>CONSISTENCY ANALYSIS</h3>
+                    <button class="close-modal" onclick="closeConsistencyModal()">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="consistency-content" class="consistency-modal-body">
+                        <div class="loading-spinner">
+                            <div class="spinner"></div>
+                            <div>Analyzing consistency...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="analytics.js"></script>
+</body>
+
+</html>

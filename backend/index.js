@@ -1,0 +1,1307 @@
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+import debateRoutes from './routes/debate-analyzer.js';
+import twitterService from './services/twitter.js';
+
+// ES module dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Express
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Serve static files from parent directory (for test HTML files)
+app.use(express.static(path.join(__dirname, '..')));
+
+// Initialize Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
+
+// Middleware - Allow all origins and handle Chrome's Private Network Access
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
+
+// Add Private Network Access headers for Chrome
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  next();
+});
+
+app.use(express.json());
+
+// =====================================================
+// API ROUTES
+// =====================================================
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Veritas API is running' });
+});
+
+// =====================================================
+// SPACES ENDPOINTS
+// =====================================================
+
+// Create a new space
+app.post('/api/spaces/create', async (req, res) => {
+  try {
+    const { title, space_url, metadata } = req.body;
+
+    const { data, error } = await supabase.rpc('create_space', {
+      p_title: title || null,
+      p_space_url: space_url || null,
+      p_metadata: metadata || {}
+    });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      space_id: data,
+      message: 'Space created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating space:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get space details
+app.get('/api/spaces/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get space details
+    const { data: space, error: spaceError } = await supabase
+      .from('spaces')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (spaceError) throw spaceError;
+
+    // Get messages with speakers
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages_with_speakers')
+      .select('*')
+      .eq('space_id', id)
+      .order('sequence_number', { ascending: true });
+
+    if (messagesError) throw messagesError;
+
+    // Get statistics
+    const { data: stats, error: statsError } = await supabase
+      .from('space_statistics')
+      .select('*')
+      .eq('space_id', id)
+      .single();
+
+    if (statsError) throw statsError;
+
+    res.json({
+      success: true,
+      data: {
+        space,
+        messages,
+        statistics: stats
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching space:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// End a space
+app.post('/api/spaces/:id/end', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase.rpc('end_space', {
+      p_space_id: id
+    });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Space ended successfully'
+    });
+  } catch (error) {
+    console.error('Error ending space:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get all spaces (for dashboard)
+app.get('/api/spaces', async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+
+    const { data, error } = await supabase
+      .from('space_statistics')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      data: data
+    });
+  } catch (error) {
+    console.error('Error fetching spaces:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// SPEAKERS ENDPOINTS
+// =====================================================
+
+// Get or create speaker
+app.post('/api/speakers/find-or-create', async (req, res) => {
+  try {
+    const { username, display_name } = req.body;
+
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        error: 'Username is required'
+      });
+    }
+
+    const { data, error } = await supabase.rpc('get_or_create_speaker', {
+      p_username: username,
+      p_display_name: display_name || null
+    });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      speaker_id: data
+    });
+  } catch (error) {
+    console.error('Error with speaker:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// MESSAGES ENDPOINTS
+// =====================================================
+
+// Create a new message
+app.post('/api/messages/create', async (req, res) => {
+  try {
+    const { space_id, speaker_username, speaker_display_name, content } = req.body;
+
+    if (!space_id || !speaker_username || !content) {
+      return res.status(400).json({
+        success: false,
+        error: 'space_id, speaker_username, and content are required'
+      });
+    }
+
+    // Create message using helper function
+    const { data: messageId, error } = await supabase.rpc('create_message', {
+      p_space_id: space_id,
+      p_speaker_username: speaker_username,
+      p_speaker_display_name: speaker_display_name || null,
+      p_content: content
+    });
+
+    if (error) throw error;
+
+    // Trigger Grok fact-checking asynchronously
+    // Don't await - let it process in background
+    analyzeMessageWithGrok(messageId, content, space_id).catch(err => {
+      console.error('Grok analysis error:', err);
+    });
+
+    res.json({
+      success: true,
+      message_id: messageId,
+      message: 'Message created and queued for fact-checking'
+    });
+  } catch (error) {
+    console.error('Error creating message:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Fact-check a specific message
+app.post('/api/spaces/fact-check', async (req, res) => {
+  try {
+    const { messageId, spaceId } = req.body;
+
+    if (!messageId) {
+      return res.status(400).json({
+        success: false,
+        error: 'messageId is required'
+      });
+    }
+
+    // Get message content
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .single();
+
+    if (messageError || !message) {
+      console.error('Error fetching message:', messageError);
+      return res.status(404).json({
+        success: false,
+        error: 'Message not found'
+      });
+    }
+
+    // Trigger Grok fact-checking
+    await analyzeMessageWithGrok(messageId, message.content, spaceId || message.space_id);
+
+    res.json({
+      success: true,
+      message: 'Fact-checking initiated'
+    });
+  } catch (error) {
+    console.error('Error in fact-check endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Get message by ID
+app.get('/api/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*, speakers!messages_speaker_id_fkey(username, display_name)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // Flatten the response to match expected format
+    const response = {
+      ...data,
+      speaker_username: data.speakers?.username || data.speaker_username,
+      speaker_display_name: data.speakers?.display_name || data.speaker_display_name
+    };
+    delete response.speakers;
+
+    res.json({
+      success: true,
+      data: response
+    });
+  } catch (error) {
+    console.error('Error fetching message:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// GROK INTEGRATION
+// =====================================================
+
+async function analyzeMessageWithGrok(messageId, content, spaceId) {
+  try {
+    // Check word count - only analyze if longer than 10 words
+    const wordCount = content.trim().split(/\s+/).length;
+
+    if (wordCount <= 10) {
+      // Skip analysis for short messages
+      await supabase
+        .from('messages')
+        .update({
+          fact_check_status: 'completed',
+          grok_explanation: 'Message too short for analysis'
+        })
+        .eq('id', messageId);
+      console.log(`⊘ Message ${messageId} skipped: too short (${wordCount} words)`);
+      return;
+    }
+
+    // Update status to processing
+    await supabase
+      .from('messages')
+      .update({ fact_check_status: 'processing' })
+      .eq('id', messageId);
+
+    // Call Grok API (xAI uses OpenAI-compatible endpoint)
+    const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a precise fact-checking assistant. ALWAYS extract and analyze ALL factual claims, especially dangerous misinformation about health, safety, or medical topics.
+
+INSTRUCTIONS:
+1. PARSE INTELLIGENTLY - Keep related statements together:
+   - Resolve pronouns (they/it/this) to their antecedents BEFORE splitting
+   - Keep comparisons as single claims (X is better than Y)
+   - Connected thoughts about same topic = one claim
+2. ONLY extract factual claims that can be verified:
+   - Skip pure jokes/metaphors with NO factual content
+   - Extract ANY verifiable claim about health/science/facts (even if said jokingly)
+   - "X is bad for health" or "Y is the best healthwise" = FACTUAL CLAIM to check
+3. SCORE each factual claim (1-10)
+4. PROVIDE brief explanation for each
+5. INCLUDE credible source URLs for factual claims
+6. CRITICAL GROKIPEDIA RULE: Use REAL Wikipedia article names (Doughnut, Strawberry, Nutrition)
+7. Only skip pure greetings/filler
+
+EXAMPLES:
+"strawberries are coming back for you and they suck for health" →
+ONE CLAIM: "strawberries suck for health" (extract the health claim, skip the joke)
+
+"I love this movie it's so beautiful" →
+NO CLAIMS: Skip - no factual content to verify
+
+Rating scale:
+- 9-10: Verified fact with strong evidence
+- 7-8: Mostly true, minor issues
+- 5-6: Mixed truth or lacks context
+- 3-4: Mostly false
+- 1-2: Completely false
+
+COMMON WIKIPEDIA ARTICLES TO USE FOR GROKIPEDIA:
+Food/Health: Doughnut, Fast_food, Obesity, Weight_loss, Diet_(nutrition), Nutrition
+Tech: Artificial_intelligence, Computer, Internet, Software, Social_media
+Climate: Climate_change, Global_warming, Renewable_energy, Pollution
+General: United_States, Economics, Politics, Education, Science, Medicine
+- GROKIPEDIA REQUIREMENT: Use ONLY real Wikipedia article titles as topics
+- Format: https://grokipedia.com/page/[Exact_Wikipedia_Title]
+- Examples of VALID topics:
+  * For weight/diet claims: Obesity, Weight_loss, Dieting, Nutrition
+  * For health claims: Medicine, Disease, Public_health
+  * For tech claims: Artificial_intelligence, Computer_science, Internet
+  * For climate claims: Climate_change, Global_warming, Greenhouse_gas
+- First try specific topic (e.g., "Donut" for donut claim)
+- If too specific, use broader category (e.g., "Junk_food" or "Weight_management")
+- MANDATORY: Every claim MUST end with a valid Grokipedia link
+
+Respond in this EXACT JSON format:
+{
+  "claims": [
+    {
+      "text": "exact claim quoted",
+      "score": 1-10,
+      "verdict": "TRUE/FALSE/MIXED/UNVERIFIABLE",
+      "explanation": "15 words max explanation",
+      "sources": ["https://healthline.com/article", "https://mayoclinic.org/info", "https://grokipedia.com/page/Obesity"]
+    }
+  ],
+  "truth_score": 1-10,
+  "summary": "One sentence overall assessment (20 words max)"
+}
+
+If no factual claims exist, return:
+{
+  "claims": [],
+  "truth_score": null,
+  "summary": "No factual claims to verify"
+}`
+          },
+          {
+            role: 'user',
+            content: content
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500
+      })
+    });
+
+    if (!grokResponse.ok) {
+      throw new Error(`Grok API error: ${grokResponse.statusText}`);
+    }
+
+    const grokData = await grokResponse.json();
+    const grokContent = grokData.choices[0].message.content;
+
+    // Debug logging
+    console.log('📝 Grok raw response:', grokContent);
+
+    // Parse Grok's JSON response
+    let analysisResult;
+    try {
+      analysisResult = JSON.parse(grokContent);
+    } catch (e) {
+      // If Grok didn't return valid JSON, create a default response
+      analysisResult = {
+        claims: [],
+        truth_score: 5,
+        summary: 'Unable to verify this claim with available sources.'
+      };
+    }
+
+    const truthScore = analysisResult.truth_score;
+    const summary = analysisResult.summary || analysisResult.explanation || 'No explanation provided.';
+    const claims = analysisResult.claims || [];
+
+    // Handle cases where no factual claims exist
+    if (truthScore === null || truthScore === undefined) {
+      await supabase
+        .from('messages')
+        .update({
+          fact_check_status: 'completed',
+          grok_explanation: summary,
+          grok_response_raw: analysisResult,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+      console.log(`⊘ Message ${messageId} had no factual claims to verify`);
+      return;
+    }
+
+    // Map truth_score (1-10) to verdict for backwards compatibility
+    let verdict;
+    if (truthScore >= 8) {
+      verdict = 'True';
+    } else if (truthScore >= 6) {
+      verdict = 'Misleading';
+    } else if (truthScore >= 4) {
+      verdict = 'Unverified';
+    } else {
+      verdict = 'False';
+    }
+
+    // Get current credibility score for the space
+    const { data: spaceData } = await supabase
+      .from('spaces')
+      .select('overall_credibility_score')
+      .eq('id', spaceId)
+      .single();
+
+    const currentScore = spaceData?.overall_credibility_score || 100;
+
+    // Calculate new score based on truth_score (1-10 scale)
+    // Higher truth score = less penalty
+    const scoreChange = (truthScore - 10) * 1.5; // Max penalty: -13.5 for score of 1
+    const newScore = Math.max(0, Math.min(100, currentScore + scoreChange));
+
+    // Update message with fact-check results
+    const { error } = await supabase
+      .from('messages')
+      .update({
+        fact_check_status: 'completed',
+        grok_verdict: verdict,
+        grok_explanation: summary,
+        truth_score: truthScore,
+        credibility_score: Math.round(newScore),
+        grok_response_raw: analysisResult,
+        processed_at: new Date().toISOString()
+      })
+      .eq('id', messageId);
+
+    // Update space overall score
+    await supabase
+      .from('spaces')
+      .update({ overall_credibility_score: Math.round(newScore) })
+      .eq('id', spaceId);
+
+    if (error) throw error;
+
+    console.log(`✓ Message ${messageId} analyzed: Truth Score ${truthScore}/10`);
+  } catch (error) {
+    console.error('Error analyzing with Grok:', error);
+
+    // Mark message as failed
+    await supabase
+      .from('messages')
+      .update({ fact_check_status: 'failed' })
+      .eq('id', messageId);
+  }
+}
+
+// Test endpoint for analysis format
+app.post('/api/test-analysis', async (req, res) => {
+  try {
+    const { content = "Elon Musk founded Tesla in 2003 and it's worth $800 billion. Also, eating sugar cures diabetes." } = req.body;
+
+    // Call Grok directly to test
+    const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a precise fact-checking assistant. ALWAYS extract and analyze ALL factual claims, especially dangerous misinformation about health, safety, or medical topics.
+
+INSTRUCTIONS:
+1. PARSE INTELLIGENTLY - Keep related statements together:
+   - Resolve pronouns (they/it/this) to their antecedents BEFORE splitting
+   - Keep comparisons as single claims (X is better than Y)
+   - Connected thoughts about same topic = one claim
+2. ONLY extract factual claims that can be verified:
+   - Skip pure jokes/metaphors with NO factual content
+   - Extract ANY verifiable claim about health/science/facts (even if said jokingly)
+   - "X is bad for health" or "Y is the best healthwise" = FACTUAL CLAIM to check
+3. SCORE each factual claim (1-10)
+4. PROVIDE brief explanation for each
+5. INCLUDE credible source URLs for factual claims
+6. CRITICAL GROKIPEDIA RULE: Use REAL Wikipedia article names (Doughnut, Strawberry, Nutrition)
+7. Only skip pure greetings/filler
+
+EXAMPLES:
+"strawberries are coming back for you and they suck for health" →
+ONE CLAIM: "strawberries suck for health" (extract the health claim, skip the joke)
+
+"I love this movie it's so beautiful" →
+NO CLAIMS: Skip - no factual content to verify
+
+Rating scale:
+- 9-10: Verified fact with strong evidence
+- 7-8: Mostly true, minor issues
+- 5-6: Mixed truth or lacks context
+- 3-4: Mostly false
+- 1-2: Completely false
+
+COMMON WIKIPEDIA ARTICLES TO USE FOR GROKIPEDIA:
+Food/Health: Doughnut, Fast_food, Obesity, Weight_loss, Diet_(nutrition), Nutrition
+Tech: Artificial_intelligence, Computer, Internet, Software, Social_media
+Climate: Climate_change, Global_warming, Renewable_energy, Pollution
+General: United_States, Economics, Politics, Education, Science, Medicine
+- GROKIPEDIA REQUIREMENT: Use ONLY real Wikipedia article titles as topics
+- Format: https://grokipedia.com/page/[Exact_Wikipedia_Title]
+- Examples of VALID topics:
+  * For weight/diet claims: Obesity, Weight_loss, Dieting, Nutrition
+  * For health claims: Medicine, Disease, Public_health
+  * For tech claims: Artificial_intelligence, Computer_science, Internet
+  * For climate claims: Climate_change, Global_warming, Greenhouse_gas
+- First try specific topic (e.g., "Donut" for donut claim)
+- If too specific, use broader category (e.g., "Junk_food" or "Weight_management")
+- MANDATORY: Every claim MUST end with a valid Grokipedia link
+
+Respond in this EXACT JSON format:
+{
+  "claims": [
+    {
+      "text": "exact claim quoted",
+      "score": 1-10,
+      "verdict": "TRUE/FALSE/MIXED/UNVERIFIABLE",
+      "explanation": "15 words max explanation",
+      "sources": ["https://healthline.com/article", "https://mayoclinic.org/info", "https://grokipedia.com/page/Obesity"]
+    }
+  ],
+  "truth_score": 1-10,
+  "summary": "One sentence overall assessment (20 words max)"
+}
+
+If no factual claims exist, return:
+{
+  "claims": [],
+  "truth_score": null,
+  "summary": "No factual claims to verify"
+}`
+          },
+          {
+            role: 'user',
+            content: content
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500
+      })
+    });
+
+    const grokData = await grokResponse.json();
+
+    // Check if response has error
+    if (!grokResponse.ok || grokData.error) {
+      console.error('Grok API error response:', grokData);
+      throw new Error(grokData.error?.message || `Grok API error: ${grokResponse.statusText}`);
+    }
+
+    if (!grokData.choices || !grokData.choices[0]) {
+      console.error('Unexpected Grok response structure:', grokData);
+      throw new Error('Invalid response from Grok API');
+    }
+
+    const grokContent = grokData.choices[0].message.content;
+
+    let analysisResult;
+    try {
+      analysisResult = JSON.parse(grokContent);
+    } catch (e) {
+      analysisResult = { error: 'Failed to parse Grok response', raw: grokContent };
+    }
+
+    res.json({
+      success: true,
+      test_content: content,
+      grok_response: analysisResult,
+      raw_response: grokData
+    });
+  } catch (error) {
+    console.error('Test analysis error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Manual trigger for re-analyzing a message
+app.post('/api/messages/:id/analyze', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get message
+    const { data: message, error } = await supabase
+      .from('messages')
+      .select('content, space_id')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // Trigger analysis
+    analyzeMessageWithGrok(id, message.content, message.space_id).catch(err => {
+      console.error('Grok analysis error:', err);
+    });
+
+    res.json({
+      success: true,
+      message: 'Message queued for re-analysis'
+    });
+  } catch (error) {
+    console.error('Error re-analyzing message:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// ANALYTICS ENDPOINTS
+// =====================================================
+
+// Dive Deeper - Propagation Graph
+// Dive Deeper - Propagation Graph
+app.post('/api/analytics/dive-deeper', async (req, res) => {
+  try {
+    const { messageId, claim, skipCache, nodeCount = 60 } = req.body;
+
+    if (!claim) {
+      return res.status(400).json({ success: false, error: 'Claim text is required' });
+    }
+
+    // Check cache first if messageId is provided and skipCache is not true
+    if (messageId && !skipCache) {
+      const { data: cachedMsg, error: cacheError } = await supabase
+        .from('messages')
+        .select('propagation_analysis')
+        .eq('id', messageId)
+        .single();
+
+      if (!cacheError && cachedMsg?.propagation_analysis) {
+        console.log(`Cache hit for message ${messageId}`);
+        return res.json({
+          success: true,
+          propagationGraph: cachedMsg.propagation_analysis,
+          cached: true
+        });
+      }
+    }
+
+    if (skipCache) {
+      console.log('skipCache=true - fetching fresh data');
+    }
+
+    console.log(`Generating propagation graph for claim: "${claim.substring(0, 50)}..."`);
+
+    // Try to use real X API data first
+    let graphData = null;
+    if (twitterService.isXApiAvailable()) {
+      console.log('Attempting to fetch real tweets from X API...');
+      try {
+        graphData = await twitterService.buildPropagationFromSearch(claim, nodeCount);
+        if (graphData) {
+          console.log(`✓ Built propagation graph from ${graphData.nodes.length} real tweets`);
+        }
+      } catch (xApiError) {
+        console.warn('X API failed, falling back to Grok:', xApiError.message);
+      }
+    } else {
+      console.log('X API not configured, using Grok to generate graph');
+    }
+
+    // Fall back to Grok generation if X API didn't return data
+    if (!graphData) {
+      console.log('Using Grok to generate propagation graph...');
+      const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'grok-4-1-fast-reasoning',
+          messages: [
+            {
+              role: 'system',
+              content: `Generate a CONNECTED knowledge graph of X posts about a claim.
+
+CRITICAL: Every node MUST be connected. Create a web of relationships, not isolated nodes.
+
+Generate 50-70 nodes with MANY links between them. Structure:
+
+1. Create 5-6 HIGH-IMPACT hub nodes (1M+ impressions, verified accounts)
+2. Each hub has 8-12 connected nodes (replies, quotes, retweets)
+3. Connect hubs to each other via quote tweets or discourse
+
+JSON Structure:
+{
+  "claim_summary": "Brief summary",
+  "topic": "Specific topic",
+  "nodes": [
+    {
+      "id": "unique_id",
+      "username": "@handle",
+      "display_name": "Name",
+      "impressions": number,
+      "followers": number,
+      "verified": boolean,
+      "tweet_text": "Post content",
+      "tweet_url": "https://x.com/handle/status/id",
+      "stance": "supports|contradicts",
+      "clusterIdx": 0
+    }
+  ],
+  "links": [
+    {"source": "hub_id", "target": "reply_id", "type": "reply"},
+    {"source": "hub_id", "target": "quote_id", "type": "quote"},
+    {"source": "hub1_id", "target": "hub2_id", "type": "discourse"}
+  ],
+  "statistics": {...}
+}
+
+RULES:
+- 50-70 nodes, but MUST have 80+ links connecting them
+- NO isolated nodes - every node must have at least 1 link
+- Create reply chains: A -> B -> C -> D
+- Connect hubs to each other
+- 45% supports, 45% contradicts, 10% neutral`
+            },
+            {
+              role: 'user',
+              content: `Generate a DENSE X interaction graph (50-70 nodes in 5-6 clusters) for this claim:\n\n"${claim}"\n\nMake sure to include high-impression accounts and create realistic reply/quote chains within each cluster.`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 8000
+        })
+      });
+
+      if (!grokResponse.ok) {
+        throw new Error(`Grok API error: ${grokResponse.statusText}`);
+      }
+
+      const grokData = await grokResponse.json();
+      const responseContent = grokData.choices[0].message.content;
+
+      // Parse the JSON response
+      try {
+        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          graphData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in response');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse Grok response:', parseError);
+        // Return a fallback minimal graph with clusters
+        const fallbackNodes = [];
+        const fallbackLinks = [];
+        const stances = ['supports', 'contradicts', 'supports', 'contradicts', 'supports'];
+        
+        for (let i = 0; i < 15; i++) {
+          fallbackNodes.push({
+            id: `node-${i}`,
+            username: `@user${i}`,
+            display_name: `User ${i}`,
+            impressions: Math.floor(Math.random() * 100000) + 1000,
+            followers: Math.floor(Math.random() * 50000) + 100,
+            verified: i < 3,
+            tweet_text: `Tweet about the claim #${i}`,
+            stance: stances[i % stances.length],
+            type: ['retweet', 'quote', 'reply'][i % 3],
+            timestamp: new Date().toISOString()
+          });
+          
+          if (i > 0) {
+            fallbackLinks.push({
+              source: `node-${Math.floor(i / 3) * 3}`,
+              target: `node-${i}`,
+              type: ['retweet', 'quote', 'reply'][i % 3]
+            });
+          }
+        }
+        
+        graphData = {
+          claim_summary: claim.substring(0, 100),
+          topic: 'General',
+          nodes: fallbackNodes,
+          links: fallbackLinks,
+          statistics: {
+            total_impressions: fallbackNodes.reduce((s, n) => s + n.impressions, 0),
+            supporters: fallbackNodes.filter(n => n.stance === 'supports').length,
+            contradictors: fallbackNodes.filter(n => n.stance === 'contradicts').length,
+            neutral: 0
+          }
+        };
+      }
+    } // End of if (!graphData) block
+
+    // Remove any origin-type nodes - we want clusters only
+    if (graphData.nodes) {
+      graphData.nodes = graphData.nodes.filter(n => n.stance !== 'original' && n.id !== 'origin');
+    }
+    if (graphData.links) {
+      graphData.links = graphData.links.filter(l => l.source !== 'origin' && l.target !== 'origin');
+    }
+    
+    // Recalculate statistics
+    if (graphData.nodes && graphData.nodes.length > 0) {
+      graphData.statistics = {
+        total_impressions: graphData.nodes.reduce((s, n) => s + (n.impressions || 0), 0),
+        supporters: graphData.nodes.filter(n => n.stance === 'supports').length,
+        contradictors: graphData.nodes.filter(n => n.stance === 'contradicts').length,
+        neutral: graphData.nodes.filter(n => !n.stance || n.stance === 'neutral').length
+      };
+    }
+
+    // Cache the result if messageId is provided
+    if (messageId) {
+      const { error: updateError } = await supabase
+        .from('messages')
+        .update({ propagation_analysis: graphData })
+        .eq('id', messageId);
+
+      if (updateError) {
+        console.warn('Failed to cache propagation analysis:', updateError.message);
+      } else {
+        console.log(`Cached propagation analysis for message ${messageId}`);
+      }
+    }
+
+    res.json({
+      success: true,
+      propagationGraph: graphData,
+      cached: false
+    });
+
+  } catch (error) {
+    console.error('Error in dive deeper:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// TEST ANALYTICS CACHING
+// =====================================================
+
+// In-memory cache for test data (use file or DB for persistence)
+const testAnalyticsCache = new Map();
+
+/**
+ * Generate cached test analytics data
+ */
+app.post('/api/test/generate-cached-analytics', async (req, res) => {
+  try {
+    const {
+      speakers = ['Speaker A', 'Speaker B'],
+      messageCount = 15,
+      title = 'Test Debate Analysis'
+    } = req.body;
+
+    // Generate a cache ID
+    const cacheId = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    // Generate test messages with varied truth scores
+    const messages = [];
+    const verdicts = ['True', 'Misleading', 'False', 'Unverified'];
+
+    for (let i = 0; i < messageCount; i++) {
+      const speaker = speakers[i % speakers.length];
+      const truthScore = Math.floor(Math.random() * 10) + 1;
+      const verdictIndex = truthScore >= 8 ? 0 : truthScore >= 5 ? 1 : truthScore >= 3 ? 2 : 3;
+
+      messages.push({
+        id: `msg-${i + 1}`,
+        speaker_display_name: speaker,
+        speaker_username: speaker.toLowerCase().replace(/\s+/g, ''),
+        content: `Test statement ${i + 1} from ${speaker} about various topics including policy, economy, or social issues.`,
+        sequence_number: i + 1,
+        truth_score: truthScore,
+        grok_verdict: verdicts[verdictIndex],
+        grok_explanation: `This is a test explanation for message ${i + 1}. The claim ${truthScore >= 5 ? 'is mostly accurate' : 'contains inaccuracies'}.`,
+        grok_response_raw: [
+          {
+            text: `Claim ${i + 1} extracted from the statement`,
+            score: truthScore,
+            verdict: verdicts[verdictIndex],
+            explanation: `Explanation for claim ${i + 1}`,
+            sources: [
+              'https://example.com/source1',
+              'https://grokipedia.com/page/Example'
+            ]
+          }
+        ],
+        fact_check_status: 'completed',
+        created_at: new Date(Date.now() - (messageCount - i) * 60000).toISOString()
+      });
+    }
+
+    // Calculate statistics
+    const avgScore = messages.reduce((sum, m) => sum + m.truth_score, 0) / messages.length;
+
+    // Create space data
+    const space = {
+      id: cacheId,
+      title: title,
+      overall_credibility_score: Math.round(avgScore * 10),
+      started_at: new Date(Date.now() - messageCount * 60000).toISOString(),
+      ended_at: new Date().toISOString(),
+      total_messages: messageCount
+    };
+
+    // Generate propagation graph for testing
+    const propagationGraph = {
+      claim_summary: "Test claim for propagation visualization",
+      origin: {
+        id: 'origin',
+        username: '@testorigin',
+        display_name: 'Test Origin Account',
+        impressions: 1500000,
+        followers: 500000,
+        verified: true,
+        tweet_text: 'This is the original test tweet for propagation testing.',
+        timestamp: new Date().toISOString()
+      },
+      nodes: [],
+      links: [],
+      statistics: {
+        total_impressions: 2500000,
+        supporters: 8,
+        contradictors: 4,
+        neutral: 3
+      }
+    };
+
+    // Generate 15 test nodes for propagation
+    for (let i = 0; i < 15; i++) {
+      const impressions = Math.floor(Math.random() * 1000000) + 1000;
+      const stances = ['supports', 'contradicts', 'neutral'];
+      const types = ['retweet', 'quote', 'reply'];
+
+      const node = {
+        id: `node-${i + 1}`,
+        username: `@testuser${i + 1}`,
+        display_name: `Test User ${i + 1}`,
+        impressions: impressions,
+        followers: Math.floor(impressions / 10),
+        verified: Math.random() > 0.7,
+        tweet_text: `Test tweet ${i + 1} discussing the claim with various perspectives.`,
+        stance: stances[i % 3],
+        type: types[i % 3],
+        timestamp: new Date(Date.now() - i * 3600000).toISOString()
+      };
+
+      propagationGraph.nodes.push(node);
+      propagationGraph.links.push({
+        source: i === 0 ? 'origin' : `node-${Math.floor(Math.random() * i) + 1}`,
+        target: `node-${i + 1}`,
+        type: types[i % 3]
+      });
+    }
+
+    // Add origin to nodes
+    propagationGraph.nodes.unshift({
+      ...propagationGraph.origin,
+      stance: 'original',
+      type: 'original'
+    });
+
+    // Store in cache
+    testAnalyticsCache.set(cacheId, {
+      space,
+      messages,
+      propagationGraph,
+      createdAt: new Date().toISOString()
+    });
+
+    console.log(`✓ Generated test analytics cache: ${cacheId}`);
+
+    res.json({
+      success: true,
+      cacheId,
+      message: `Generated ${messageCount} test messages for ${speakers.length} speakers`,
+      testUrl: `/test-cached-analytics.html?cacheId=${cacheId}`
+    });
+
+  } catch (error) {
+    console.error('Error generating test cache:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Load cached test analytics data
+ */
+app.get('/api/test/cached-analytics/:cacheId', async (req, res) => {
+  try {
+    const { cacheId } = req.params;
+
+    const cached = testAnalyticsCache.get(cacheId);
+
+    if (!cached) {
+      return res.status(404).json({
+        success: false,
+        error: 'Cache not found or expired'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        space: cached.space,
+        messages: cached.messages,
+        propagationGraph: cached.propagationGraph
+      }
+    });
+
+  } catch (error) {
+    console.error('Error loading cached analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * List all cached test analytics
+ */
+app.get('/api/test/cached-analytics', async (req, res) => {
+  try {
+    const caches = [];
+    for (const [id, data] of testAnalyticsCache) {
+      caches.push({
+        cacheId: id,
+        title: data.space.title,
+        messageCount: data.messages.length,
+        createdAt: data.createdAt
+      });
+    }
+
+    res.json({ success: true, caches });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * Load real space data from Supabase for testing
+ * This allows testing features with already-analyzed spaces
+ */
+app.get('/api/test/load-space/:spaceId', async (req, res) => {
+  try {
+    const { spaceId } = req.params;
+
+    // Fetch space data
+    const { data: space, error: spaceError } = await supabase
+      .from('spaces')
+      .select('*')
+      .eq('id', spaceId)
+      .single();
+
+    if (spaceError || !space) {
+      return res.status(404).json({
+        success: false,
+        error: 'Space not found'
+      });
+    }
+
+    // Fetch messages with speaker names using the view
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages_with_speakers')
+      .select('*')
+      .eq('space_id', spaceId)
+      .order('sequence_number', { ascending: true });
+
+    if (messagesError) {
+      // Fallback to regular messages if view doesn't exist
+      console.warn('View query failed, falling back to messages table:', messagesError.message);
+      const { data: rawMessages, error: rawError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('space_id', spaceId)
+        .order('sequence_number', { ascending: true });
+
+      if (rawError) throw rawError;
+
+      // Cache with raw messages
+      const cacheId = `real-${spaceId}`;
+      testAnalyticsCache.set(cacheId, {
+        space,
+        messages: rawMessages || [],
+        propagationGraph: null,
+        createdAt: new Date().toISOString(),
+        isRealSpace: true
+      });
+
+      console.log(`✓ Loaded real space ${spaceId} with ${rawMessages?.length || 0} messages (fallback)`);
+
+      return res.json({
+        success: true,
+        cacheId,
+        data: {
+          space,
+          messages: rawMessages || []
+        }
+      });
+    }
+
+    // Cache it for quick access
+    const cacheId = `real-${spaceId}`;
+    testAnalyticsCache.set(cacheId, {
+      space,
+      messages: messages || [],
+      propagationGraph: null,
+      createdAt: new Date().toISOString(),
+      isRealSpace: true
+    });
+
+    console.log(`✓ Loaded real space ${spaceId} with ${messages?.length || 0} messages (with speakers)`);
+
+    res.json({
+      success: true,
+      cacheId,
+      data: {
+        space,
+        messages: messages || []
+      }
+    });
+
+  } catch (error) {
+    console.error('Error loading real space:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// ERROR HANDLING
+// =====================================================
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error'
+  });
+});
+
+// Grokipedia Chat Endpoint
+app.post('/api/grokipedia/chat', async (req, res) => {
+  try {
+    const { message, context } = req.body;
+
+    const completion = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant on Grokipedia. The user is reading an article. 
+            Context/Claim from the article: "${context || 'No specific context provided'}".
+            Answer the user's question based on this context if relevant, or general knowledge. 
+            Keep answers concise and helpful.`
+          },
+          { role: 'user', content: message }
+        ]
+      })
+    });
+
+    const data = await completion.json();
+    const reply = data.choices[0].message.content;
+
+    res.json({ success: true, reply });
+  } catch (error) {
+    console.error('Error in Grokipedia chat:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// =====================================================
+// DEBATE ANALYZER ROUTES
+// =====================================================
+
+app.use('/api/debate', debateRoutes);
+
+// =====================================================
+// START SERVER
+// =====================================================
+
+app.listen(PORT, () => {
+  console.log(`🚀 Veritas API running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📝 Debate analyzer: http://localhost:${PORT}/api/debate`);
+});
+

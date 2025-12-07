@@ -1,0 +1,920 @@
+/* Overlay styling for Veritas - Minimal Swiss design */
+
+#veritas-overlay {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 320px;
+  max-height: 520px;
+  background: #000000;
+  border: 1px solid #ffffff;
+  border-radius: 0;
+  box-shadow: none;
+  z-index: 999999;
+  font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.veritas-main-view,
+.veritas-detail-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.veritas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #1a1a1a;
+  background: #000000;
+  color: #ffffff;
+}
+
+.veritas-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.veritas-drag-handle {
+  cursor: move;
+  padding: 0;
+  display: flex;
+  gap: 2px;
+  opacity: 0.3;
+  transition: opacity 0.2s;
+}
+
+.veritas-drag-handle:hover {
+  opacity: 1;
+}
+
+.drag-dot {
+  width: 2px;
+  height: 12px;
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.veritas-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.veritas-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.veritas-icon-button {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+  opacity: 0.6;
+}
+
+.veritas-icon-button:hover {
+  opacity: 1;
+}
+
+#veritas-close {
+  font-size: 24px;
+  line-height: 1;
+  font-weight: 200;
+  position: relative;
+  top: -2px;
+}
+
+#veritas-analytics svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.5;
+}
+
+.veritas-stats {
+  padding: 24px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #000000;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.stat-item[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000000;
+  color: #ffffff;
+  padding: 4px 8px;
+  border: 1px solid #ffffff;
+  font-size: 10px;
+  font-weight: 400;
+  white-space: nowrap;
+  z-index: 1000;
+  pointer-events: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+  color: #ffffff;
+}
+
+.stat-value.truthful {
+  color: #00ba7c;
+}
+
+.stat-value.questionable {
+  color: #dc2626;
+}
+
+.veritas-controls {
+  padding: 12px 16px;
+  border-bottom: 1px solid #2f3336;
+  background: #000000;
+}
+
+.veritas-button {
+  width: 100%;
+  padding: 12px;
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 9999px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.veritas-button:hover {
+  background: #e7e9ea;
+}
+
+.veritas-button:active {
+  background: #d6d9db;
+}
+
+.veritas-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-spinner {
+  display: inline-block;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.button-spinner.spinning {
+  opacity: 1;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+.veritas-claims {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  max-height: 400px;
+  background: #000000;
+}
+
+.placeholder {
+  text-align: center;
+  color: #71767b;
+  font-size: 11px;
+  padding: 40px 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.claim-item {
+  background: transparent;
+  border-radius: 0;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #1a1a1a;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.claim-item:last-child {
+  border-bottom: none;
+}
+
+.claim-item.live-preview {
+  border-bottom: 1px solid #ffffff;
+}
+
+.claim-item.analyzing {
+  opacity: 0.5;
+}
+
+.live-indicator {
+  font-size: 10px;
+  color: #ffffff;
+  font-weight: 400;
+  margin-top: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.5;
+}
+
+.claim-item.live-preview .live-indicator {
+  opacity: 1;
+}
+
+.claim-item.analyzing .live-indicator {
+  opacity: 0.5;
+}
+
+/* Green shimmering dot for live indicator */
+.live-dot {
+  width: 6px;
+  height: 6px;
+  background: #00ba7c;
+  border-radius: 50%;
+  display: inline-block;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Animation when message completes and moves down */
+.claim-item.completed {
+  animation: completeGlow 0.6s ease-out;
+}
+
+@keyframes completeGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 20px 2px rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    border-color: #1a1a1a;
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Loading Dots Animation */
+.loading-dots:after {
+  content: '.';
+  animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes dots {
+
+  0%,
+  20% {
+    content: '.';
+  }
+
+  40% {
+    content: '..';
+  }
+
+  60% {
+    content: '...';
+  }
+
+  80%,
+  100% {
+    content: '';
+  }
+}
+
+.claim-speaker {
+  font-size: 11px;
+  font-weight: 400;
+  color: #71767b;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.speaker-name {
+  font-weight: 400;
+  color: #ffffff;
+}
+
+.speaker-username {
+  color: #71767b;
+  font-weight: 400;
+}
+
+.claim-text {
+  font-size: 12px;
+  color: #ffffff;
+  margin-bottom: 12px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.claim-verdict {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.claim-verdict.true {
+  background: rgba(0, 186, 124, 0.1);
+  color: #00ba7c;
+  border: 1px solid #00ba7c;
+}
+
+.claim-verdict.false {
+  background: rgba(249, 24, 128, 0.1);
+  color: #f91880;
+  border: 1px solid #f91880;
+}
+
+.claim-verdict.misleading {
+  background: rgba(255, 212, 0, 0.1);
+  color: #ffd400;
+  border: 1px solid #ffd400;
+}
+
+.claim-verdict.unverified {
+  background: rgba(113, 118, 123, 0.1);
+  color: #71767b;
+  border: 1px solid #71767b;
+}
+
+/* Truth score styling - Minimal */
+.truth-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 0;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  background: transparent;
+}
+
+.truth-score:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.truth-score.clickable:active {
+  transform: scale(0.98);
+}
+
+.score-number {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.score-total {
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 400;
+}
+
+/* Red to Green colors - Brighter and more visible */
+.truth-score.score-very-low {
+  color: #ff4444;
+  border-color: #ff4444;
+  background: rgba(255, 68, 68, 0.05);
+}
+
+.truth-score.score-very-low:hover {
+  background: #ff4444;
+  color: #000000;
+  border-color: #ff4444;
+}
+
+.truth-score.score-low {
+  color: #ff8c42;
+  border-color: #ff8c42;
+  background: rgba(255, 140, 66, 0.05);
+}
+
+.truth-score.score-low:hover {
+  background: #ff8c42;
+  color: #000000;
+  border-color: #ff8c42;
+}
+
+.truth-score.score-medium {
+  color: #ffd700;
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.truth-score.score-medium:hover {
+  background: #ffd700;
+  color: #000000;
+  border-color: #ffd700;
+}
+
+.truth-score.score-high {
+  color: #44ff44;
+  border-color: #44ff44;
+  background: rgba(68, 255, 68, 0.05);
+}
+
+.truth-score.score-high:hover {
+  background: #44ff44;
+  color: #000000;
+  border-color: #44ff44;
+}
+
+.score-skip {
+  font-size: 10px;
+  color: #71767b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 8px;
+}
+
+.claim-explanation {
+  font-size: 14px;
+  color: #71767b;
+  line-height: 1.5;
+}
+
+/* Scrollbar styling - Minimal */
+.veritas-claims::-webkit-scrollbar,
+.detail-content::-webkit-scrollbar {
+  width: 2px;
+}
+
+.veritas-claims::-webkit-scrollbar-track,
+.detail-content::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+.veritas-claims::-webkit-scrollbar-thumb,
+.detail-content::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.veritas-claims::-webkit-scrollbar-thumb:hover,
+.detail-content::-webkit-scrollbar-thumb:hover {
+  background: #71767b;
+}
+
+/* Detail View Styling - Minimal Swiss Design */
+.veritas-detail-view {
+  background: #000000;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.back-button {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+  opacity: 0.3;
+  width: 20px;
+  height: 20px;
+}
+
+.back-button:hover {
+  opacity: 1;
+}
+
+.back-button:active {
+  transform: scale(0.9);
+}
+
+.detail-header h3 {
+  font-size: 11px;
+  font-weight: 400;
+  color: #ffffff;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+
+.detail-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Speaker and Claim Section */
+.detail-speaker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-speaker-name {
+  font-size: 14px;
+  color: #ffffff;
+  font-weight: 400;
+}
+
+.detail-speaker-username {
+  font-size: 11px;
+  color: #71767b;
+  font-weight: 400;
+}
+
+.detail-claim {
+  font-size: 13px;
+  color: #ffffff;
+  line-height: 1.6;
+  font-weight: 300;
+  padding: 20px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+/* Score Section - Minimal, No Boxes */
+.detail-score-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0;
+  border-bottom: 1px solid #1a1a1a;
+  padding-bottom: 24px;
+}
+
+.detail-score-label {
+  font-size: 10px;
+  color: #71767b;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
+.detail-score-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.score-number-large {
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.score-total-large {
+  font-size: 18px;
+  opacity: 0.5;
+  font-weight: 400;
+}
+
+.detail-score-value.score-very-low {
+  color: #ff4444;
+}
+
+.detail-score-value.score-low {
+  color: #ff8c42;
+}
+
+.detail-score-value.score-medium {
+  color: #ffd700;
+}
+
+.detail-score-value.score-high {
+  color: #44ff44;
+}
+
+.detail-score-bar {
+  width: 100%;
+  height: 2px;
+  background: #1a1a1a;
+  border-radius: 0;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 0;
+  transition: width 0.6s ease-out;
+}
+
+.score-bar-fill.score-very-low {
+  background: #ff4444;
+}
+
+.score-bar-fill.score-low {
+  background: #ff8c42;
+}
+
+.score-bar-fill.score-medium {
+  background: #ffd700;
+}
+
+.score-bar-fill.score-high {
+  background: #44ff44;
+}
+
+.detail-score-rating {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+/* Explanation Section - Clean, No Box */
+.detail-explanation-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0;
+}
+
+.detail-explanation-label {
+  font-size: 10px;
+  color: #71767b;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.7;
+}
+
+.detail-explanation-text {
+  font-size: 12px;
+  color: #ffffff;
+  line-height: 1.7;
+  font-weight: 300;
+  opacity: 0.9;
+}
+
+/* Claim Breakdown Styles */
+.claims-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 12px;
+}
+
+.claim-item-detail {
+  padding: 16px;
+  border: 1px solid #ffffff;
+  margin-bottom: 12px;
+}
+
+.claim-item-detail:last-child {
+  margin-bottom: 0;
+}
+
+.claim-quote {
+  font-size: 12px;
+  color: #ffffff;
+  margin-bottom: 8px;
+  padding-left: 12px;
+  position: relative;
+  font-style: italic;
+  opacity: 0.95;
+}
+
+.claim-quote::before {
+  content: '"';
+  position: absolute;
+  left: 0;
+  color: #71767b;
+  font-size: 14px;
+}
+
+.claim-score-visual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.score-dots {
+  display: flex;
+  gap: 2px;
+}
+
+.score-dot {
+  width: 6px;
+  height: 6px;
+  background: #1a1a1a;
+  transition: background 0.2s;
+}
+
+.score-dot.filled {
+  background: currentColor;
+}
+
+.claim-verdict-badge {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border: 1px solid;
+  margin-left: auto;
+}
+
+.claim-verdict-badge.true {
+  color: #44ff44;
+  border-color: #44ff44;
+}
+
+.claim-verdict-badge.false {
+  color: #ff4444;
+  border-color: #ff4444;
+}
+
+.claim-verdict-badge.mixed {
+  color: #ffd700;
+  border-color: #ffd700;
+}
+
+.claim-verdict-badge.opinion {
+  color: #71767b;
+  border-color: #71767b;
+}
+
+.claim-explanation {
+  font-size: 10px;
+  color: #71767b;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+/* Sources section wrapper */
+.claim-sources-wrapper {
+  margin-top: 12px;
+}
+
+.claim-sources-title {
+  font-size: 9px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 4px;
+}
+
+.claim-sources-divider {
+  width: 100%;
+  height: 1px;
+  background: #1a1a1a;
+  margin-bottom: 8px;
+  border-top: 1px dashed #2f3336;
+}
+
+.claim-sources {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.claim-source-link {
+  font-size: 10px;
+  color: #71767b;
+  text-decoration: none;
+  position: relative;
+  transition: color 0.2s;
+  text-transform: lowercase;
+}
+
+.claim-source-link:hover {
+  color: #ffffff;
+}
+
+.claim-source-link::after {
+  content: " ↗";
+  font-size: 8px;
+  opacity: 0.7;
+}
+
+/* Separator between sources */
+.claim-source-separator {
+  color: #2f3336;
+  margin: 0 2px;
+  font-size: 10px;
+}
+
+/* Special styling for Grokipedia links */
+.claim-source-link.grokipedia-link {
+  font-style: italic;
+  opacity: 0.9;
+}
+
+/* Summary section */
+.analysis-summary {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #1a1a1a;
+  font-size: 11px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
