@@ -919,7 +919,7 @@ RULES:
         const fallbackNodes = [];
         const fallbackLinks = [];
         const stances = ['supports', 'contradicts', 'supports', 'contradicts', 'supports'];
-        
+
         for (let i = 0; i < 15; i++) {
           fallbackNodes.push({
             id: `node-${i}`,
@@ -933,7 +933,7 @@ RULES:
             type: ['retweet', 'quote', 'reply'][i % 3],
             timestamp: new Date().toISOString()
           });
-          
+
           if (i > 0) {
             fallbackLinks.push({
               source: `node-${Math.floor(i / 3) * 3}`,
@@ -942,7 +942,7 @@ RULES:
             });
           }
         }
-        
+
         graphData = {
           claim_summary: claim.substring(0, 100),
           topic: 'General',
@@ -965,7 +965,7 @@ RULES:
     if (graphData.links) {
       graphData.links = graphData.links.filter(l => l.source !== 'origin' && l.target !== 'origin');
     }
-    
+
     // Recalculate statistics
     if (graphData.nodes && graphData.nodes.length > 0) {
       graphData.statistics = {
@@ -1347,6 +1347,34 @@ app.post('/api/grokipedia/chat', async (req, res) => {
 app.use('/api/debate', debateRoutes);
 app.use('/api/claims', claimSourcesRoutes);
 app.use('/api/spaces', spaceEndRoutes);
+
+// =====================================================
+// TWITTER BOT CONFIG ENDPOINT
+// =====================================================
+
+// Endpoint to provide Twitter credentials to the Chrome extension
+// Credentials are stored in .env (gitignored) so they stay secret
+app.get('/api/twitter/config', (req, res) => {
+  // Only serve if credentials are configured
+  if (!process.env.X_API_KEY) {
+    return res.status(404).json({
+      success: false,
+      error: 'Twitter credentials not configured on server'
+    });
+  }
+
+  res.json({
+    success: true,
+    config: {
+      API_KEY: process.env.X_API_KEY,
+      API_SECRET: process.env.X_API_SECRET,
+      ACCESS_TOKEN: process.env.X_ACCESS_TOKEN,
+      ACCESS_TOKEN_SECRET: process.env.X_ACCESS_TOKEN_SECRET,
+      BOT_USER_ID: process.env.X_BOT_USER_ID,
+      CHECK_INTERVAL: parseFloat(process.env.X_CHECK_INTERVAL) || 0.5
+    }
+  });
+});
 
 // =====================================================
 // START SERVER
