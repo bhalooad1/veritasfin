@@ -371,7 +371,7 @@ async function analyzeMessageWithGrok(messageId, content, spaceId) {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-4-0709', // Best model for maximum accuracy
+        model: 'grok-4-1-fast-reasoning', // Fast model for widget (Chrome extension)
         messages: [
           {
             role: 'system',

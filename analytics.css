@@ -116,15 +116,14 @@ header {
     gap: 20px;
     flex-grow: 1;
     min-height: 0;
-    align-items: start;
-    /* Important for nested scrolling */
+    /* Timeline and sidebar will share same rows for perfect alignment */
 }
 
 .sidebar {
     display: flex;
     flex-direction: column;
     gap: 15px;  /* Increased gap for better visual separation */
-    height: 100%;
+    align-self: start; /* Don't stretch to fill available space */
 }
 
 /* Widgets */
@@ -136,11 +135,12 @@ header {
 }
 
 .timeline-widget {
-    grid-row: 1 / span 2;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    /* Height will match sidebar content automatically */
+    /* Stretch to bottom of viewport with 20px gap */
+    height: calc(100vh - 160px);
+    align-self: start;
 }
 
 .stats-widget {
@@ -156,8 +156,8 @@ header {
 }
 
 .details-widget {
-    flex-grow: 1;
     min-height: 200px;
+    /* Don't use flex-grow - let content determine height */
 }
 
 .widget-header {
