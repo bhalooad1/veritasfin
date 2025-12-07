@@ -1,10 +1,43 @@
 {
   "manifest_version": 3,
-  "name": "Veritas - Debate Fact Checker",
+  "name": "Veritas - Twitter Spaces Fact Checker",
   "version": "1.0.0",
-  "description": "AI-powered real-time fact-checking for political debates",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "description": "Real-time fact checking for Twitter Spaces with credibility scoring",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://twitter.com/*",
+    "https://x.com/*",
+    "http://localhost:3000/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://twitter.com/*",
+        "https://x.com/*"
+      ],
+      "js": [
+        "content-simple.js"
+      ],
+      "css": [
+        "overlay.css"
+      ]
+    },
+    {
+      "matches": [
+        "*://*.grokipedia.com/*",
+        "*://grokipedia.com/*"
+      ],
+      "js": [
+        "grokipedia-content.js"
+      ]
+    }
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -13,14 +46,28 @@
       "128": "icon128.png"
     }
   },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
+  "web_accessible_resources": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": []
+      "resources": [
+        "icon.png",
+        "icon16.png",
+        "icon48.png",
+        "icon128.png",
+        "v_icon.png",
+        "v_icon16.png",
+        "v_icon48.png",
+        "v_icon128.png",
+        "analytics.html",
+        "analytics.css",
+        "analytics.js",
+        "process-debate.html",
+        "process-debate.js",
+        "libs/d3.v7.min.js",
+        "libs/chart.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "icons": {

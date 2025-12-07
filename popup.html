@@ -1,52 +1,259 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Veritas</title>
-    <style>
-      body {
-        width: 320px;
-        padding: 20px;
-        font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
-        background: #000000;
-        color: #ffffff;
-        margin: 0;
-      }
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Veritas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-      h1 {
-        font-size: 16px;
-        margin: 0 0 16px 0;
-        font-weight: 600;
-        color: #ffffff;
-      }
+    body {
+      width: 320px;
+      height: 420px;
+      font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
 
-      .status {
-        padding: 12px;
-        background: #1a1a1a;
-        border: 1px solid #333333;
-        margin-bottom: 16px;
-        font-size: 12px;
-      }
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 32px;
+      justify-content: space-between;
+    }
 
-      button {
-        width: 100%;
-        padding: 12px;
-        background: #00ba7c;
-        color: #ffffff;
-        border: none;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 600;
-        font-family: inherit;
-      }
-    </style>
-  </head>
-  <body>
-    <h1>VERITAS</h1>
-    <div class="status">
-      <div>Status: Ready</div>
+    .header-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 11px;
+      color: #71767b;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: #1a1a1a;
+      margin: 32px 0;
+    }
+
+    .status-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+
+    .status-key {
+      color: #71767b;
+    }
+
+    .status-value-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-indicator {
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .status-indicator.active {
+      background: #00ba7c;
+    }
+
+    .status-indicator.warning {
+      background: #ffd400;
+    }
+
+    .status-indicator.error {
+      background: #dc2626;
+    }
+
+    .status-text {
+      color: #ffffff;
+      font-weight: 400;
+    }
+
+    .action-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .button {
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid #333333;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 12px 16px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: inherit;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .button:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .button:active {
+      transform: scale(0.98);
+    }
+
+    .button.primary {
+      border-color: #00ba7c;
+      color: #00ba7c;
+    }
+
+    .button.primary:hover {
+      background: rgba(0, 186, 124, 0.1);
+      border-color: #00ba7c;
+    }
+
+    .button-icon {
+      width: 12px;
+      height: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .button.icon-only {
+      width: 40px;
+      height: 40px;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      color: #ffffff;
+    }
+
+    .button.icon-only svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .button.icon-only:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
+    }
+
+    .button.icon-only:active {
+      transform: scale(0.95);
+    }
+
+    .footer-section {
+      margin-top: auto;
+      padding-top: 32px;
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: #2f3336;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-section">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <img src="icon16.png" alt="Veritas" style="width: 16px; height: 16px;">
+        <div class="title">VERITAS</div>
+      </div>
+      <div class="subtitle">SEEING TRUTH ON TWITTER SPACES</div>
     </div>
-    <button id="analyzeBtn">ANALYZE DEBATE</button>
-    <script src="popup.js"></script>
-  </body>
+
+    <div class="divider"></div>
+
+    <div class="status-section">
+      <div class="status-line">
+        <span class="status-key">EXTENSION</span>
+        <div class="status-value-container">
+          <span class="status-indicator active"></span>
+          <span class="status-text" id="status">ACTIVE</span>
+        </div>
+      </div>
+      <div class="status-line">
+        <span class="status-key">BACKEND</span>
+        <div class="status-value-container">
+          <span class="status-indicator" id="backendDot"></span>
+          <span class="status-text" id="backendStatus">CHECKING</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="action-section">
+      <button class="button" id="toggleOverlay">
+        <span class="button-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
+        </span>
+        TOGGLE OVERLAY
+      </button>
+      <button class="button" id="processDebateBtn">
+        <span class="button-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </span>
+        PROCESS DEBATE
+      </button>
+    </div>
+
+    <div class="footer-section">
+      <div class="footer-text">POWERED BY GROK AI</div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
 </html>
