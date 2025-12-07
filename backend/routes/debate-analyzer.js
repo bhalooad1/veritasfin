@@ -1,5 +1,6 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
+import DebateParser from '../debate-parser.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -56,11 +57,12 @@ router.post('/create-debate-space', async (req, res) => {
 });
 
 /**
- * Placeholder for debate analysis
+ * Parse and analyze a debate transcript
  */
 router.post('/analyze-transcript', async (req, res) => {
     try {
         const { transcript, space_id } = req.body;
+        const supabase = getSupabase();
 
         if (!transcript || !space_id) {
             return res.status(400).json({
@@ -68,13 +70,64 @@ router.post('/analyze-transcript', async (req, res) => {
             });
         }
 
-        // TODO: Implement Grok integration
-        // TODO: Implement debate parser
-        // TODO: Store messages in database
+        // Parse the transcript
+        const parser = new DebateParser();
+        const parsedMessages = parser.parseTranscript(transcript);
+
+        console.log(`Parsed ${parsedMessages.length} messages from transcript`);
+
+        // Get speakers from database
+        const { data: speakers, error: speakersError } = await supabase
+            .from('speakers')
+            .select('*');
+
+        if (speakersError) throw speakersError;
+
+        const speakerMap = {};
+        speakers.forEach(s => {
+            speakerMap[s.display_name] = s.id;
+        });
+
+        // Insert messages into database
+        const insertedMessages = [];
+        for (const msg of parsedMessages) {
+            const speaker_id = speakerMap[msg.speaker];
+
+            if (!speaker_id) {
+                console.log(`Speaker not found: ${msg.speaker}, skipping...`);
+                continue;
+            }
+
+            const messageData = {
+                space_id: space_id,
+                speaker_id: speaker_id,
+                content: msg.content,
+                sequence_number: msg.sequence_number,
+                fact_check_status: 'pending',
+                created_at: new Date().toISOString()
+            };
+
+            const { data: insertedMsg, error: msgError } = await supabase
+                .from('messages')
+                .insert(messageData)
+                .select()
+                .single();
+
+            if (msgError) {
+                console.error('Error inserting message:', msgError);
+                continue;
+            }
+
+            insertedMessages.push(insertedMsg);
+        }
+
+        const stats = parser.getStatistics();
 
         res.json({
             success: true,
-            message: 'Transcript analysis endpoint ready'
+            space_id: space_id,
+            statistics: stats,
+            messages_inserted: insertedMessages.length
         });
 
     } catch (error) {
