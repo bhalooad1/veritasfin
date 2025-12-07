@@ -34,7 +34,8 @@ router.post('/:messageId/:claimIndex/generate-sources', async (req, res) => {
         console.log(`\n⚡ MODEL DEBUG:`);
         console.log(`   Using model: ${modelToUse}`);
         console.log(`   Model type: Lightning fast (optimized for widget)`);
-        console.log(`   Expected speed: 2-4 seconds`);
+        console.log(`   Web search: ENABLED`);
+        console.log(`   Expected speed: 3-6 seconds (including web search)`);
 
         const startTime = Date.now();
 
@@ -50,9 +51,14 @@ router.post('/:messageId/:claimIndex/generate-sources', async (req, res) => {
                 messages: [
                     {
                         role: 'system',
-                        content: `You are a research assistant specializing in finding credible, verifiable sources.
+                        content: `You are a research assistant specializing in finding credible, verifiable sources using web search.
 
-TASK: Find 20 REAL, WORKING URLs that verify, discuss, or provide context for the given claim.
+TASK: Use web search to find 20 REAL, WORKING URLs that verify, discuss, or provide context for the given claim.
+
+SEARCH STRATEGY:
+1. Use web search to find current, authoritative sources
+2. Search multiple query variations to get comprehensive results
+3. Look for recent articles, studies, and official statements
 
 CRITICAL REQUIREMENTS:
 1. Every URL MUST be real and accessible (no 404s, no made-up paths)
@@ -87,13 +93,19 @@ Return ONLY a valid JSON array of 20 URLs. No explanation, no markdown, just the
 Example:
 ["https://www.census.gov/data/tables.html", "https://www.factcheck.org/2024/article-name/", ..., "https://grokipedia.com/page/Topic"]
 
-If you cannot find 20 credible URLs, return fewer rather than making up fake URLs.`
+Use web search to ensure all URLs are current and accessible.`
                     },
                     {
                         role: 'user',
-                        content: `Find credible sources for this claim:\n\n"${claimText}"`
+                        content: `Use web search to find credible sources for this claim:\n\n"${claimText}"`
                     }
                 ],
+                tools: [
+                    {
+                        type: "web_search"
+                    }
+                ],
+                tool_choice: "auto",
                 temperature: 0.3,
                 max_tokens: 2000
             })
