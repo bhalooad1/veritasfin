@@ -79,6 +79,85 @@ export async function searchTweets(query, maxResults = 25) {
 }
 
 /**
+ * Get all tweets in a conversation thread
+ * @param {string} conversationId - The conversation ID (usually the original tweet's ID)
+ * @param {number} maxResults - Maximum number of results (10-100)
+ * @returns {Promise<Object>} - Thread tweets with user data
+ */
+export async function getThreadTweets(conversationId, maxResults = 100) {
+    try {
+        console.log(`🧵 Fetching thread with conversation_id: ${conversationId}`);
+
+        // First, fetch the original tweet (the one that started the conversation)
+        // The search API only returns REPLIES, not the original tweet
+        let originalTweet = null;
+        try {
+            const originalResult = await xApiRequest(`/tweets/${conversationId}`, {
+                'tweet.fields': 'created_at,public_metrics,author_id,conversation_id,in_reply_to_user_id,referenced_tweets,text',
+                'user.fields': 'name,username,verified,public_metrics,profile_image_url',
+                'expansions': 'author_id'
+            });
+
+            if (originalResult.data) {
+                originalTweet = originalResult.data;
+                // Attach user info
+                if (originalResult.includes?.users?.[0]) {
+                    originalTweet.user = originalResult.includes.users[0];
+                }
+                console.log(`🧵 Found original tweet: "${originalTweet.text?.substring(0, 50)}..."`);
+            }
+        } catch (e) {
+            console.log('⚠️ Could not fetch original tweet:', e.message);
+        }
+
+        // Then fetch all replies in the conversation
+        const result = await xApiRequest('/tweets/search/recent', {
+            query: `conversation_id:${conversationId}`,
+            max_results: Math.min(Math.max(maxResults, 10), 100),
+            'tweet.fields': 'created_at,public_metrics,author_id,conversation_id,in_reply_to_user_id,referenced_tweets,text',
+            'user.fields': 'name,username,verified,public_metrics,profile_image_url',
+            'expansions': 'author_id,referenced_tweets.id'
+        });
+
+        // Build user lookup map
+        const userMap = {};
+        if (result.includes?.users) {
+            result.includes.users.forEach(user => {
+                userMap[user.id] = user;
+            });
+        }
+
+        // Sort tweets chronologically (oldest first)
+        let tweets = (result.data || []).sort((a, b) =>
+            new Date(a.created_at) - new Date(b.created_at)
+        );
+
+        // Attach user info to each tweet
+        tweets = tweets.map(tweet => ({
+            ...tweet,
+            user: userMap[tweet.author_id] || null
+        }));
+
+        // Prepend original tweet if we found it
+        if (originalTweet) {
+            tweets = [originalTweet, ...tweets];
+        }
+
+        console.log(`🧵 Found ${tweets.length} total tweets in thread (including original)`);
+
+        return {
+            tweets: tweets,
+            userMap,
+            conversationId,
+            meta: result.meta
+        };
+    } catch (error) {
+        console.error('Thread fetch error:', error.message);
+        throw error;
+    }
+}
+
+/**
  * Get user by username
  * @param {string} username - X username (without @)
  * @returns {Promise<Object>} - User data
@@ -523,7 +602,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
 
         // Determine number of clusters (3-5 depending on tweet count)
         const numClusters = Math.min(5, Math.max(3, Math.floor(relevantTweets.length / 5)));
-        
+
         // First pass: identify cluster leaders (highest engagement tweets)
         relevantTweets.sort((a, b) => b.engagement - a.engagement);
         const clusterLeaders = [];
@@ -533,7 +612,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 clusterIdx: i
             });
         }
-        
+
         // Assign each tweet to a cluster based on stance or round-robin
         const clusterAssignments = new Map();
 
@@ -542,7 +621,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
             const { tweet, user } = relevantTweets[i];
             const impressions = tweet.public_metrics?.impression_count ||
                 (tweet.public_metrics?.like_count || 0) * 10 || 100;
-            
+
             // Assign to cluster - leaders first, then distribute others
             let clusterIdx;
             const leaderMatch = clusterLeaders.find(l => l.id === tweet.id);
@@ -616,7 +695,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                     }
                 }
             }
-            
+
             // If still neutral, apply probabilistic stance based on tweet characteristics
             // This ensures we get more colored nodes
             if (stance === 'neutral') {
@@ -669,7 +748,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
             };
             nodes.push(node);
         }
-        
+
         // Make RETWEETS inherit the stance of the original tweet
         const nodeMap = new Map(nodes.map(n => [n.id, n]));
         for (const node of nodes) {
@@ -680,11 +759,11 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 }
             }
         }
-        
+
         // Create links for REAL reply/quote/retweet relationships
         const nodeIds = new Set(nodes.map(n => n.id));
         const connectedNodes = new Set();
-        
+
         for (const node of nodes) {
             if (node.referencedTweetId && nodeIds.has(node.referencedTweetId)) {
                 links.push({
@@ -696,7 +775,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 connectedNodes.add(node.referencedTweetId);
             }
         }
-        
+
         // CREATE DENSE CLUSTER-BASED CONNECTIONS
         // HYBRID APPROACH: Concrete connections (reply/quote/retweet) + related connections for density
         const clusterGroups = {};
@@ -705,22 +784,22 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
             if (!clusterGroups[cluster]) clusterGroups[cluster] = [];
             clusterGroups[cluster].push(node);
         });
-        
+
         // For each cluster, create a dense connected subgraph
         Object.values(clusterGroups).forEach(clusterNodes => {
             if (clusterNodes.length < 2) return;
-            
+
             // Sort by impressions to find hub
             clusterNodes.sort((a, b) => (b.impressions || 0) - (a.impressions || 0));
             const hub = clusterNodes[0];
             connectedNodes.add(hub.id);
-            
+
             // PHASE 1: Create concrete connections (reply/quote/retweet) from hub
             // First 3-4 nodes get direct reply/quote connections to hub
             for (let i = 1; i < Math.min(5, clusterNodes.length); i++) {
                 const node = clusterNodes[i];
                 if (connectedNodes.has(node.id)) continue;
-                
+
                 const types = ['reply', 'reply', 'quote', 'retweet'];
                 links.push({
                     source: hub.id,
@@ -729,12 +808,12 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 });
                 connectedNodes.add(node.id);
             }
-            
+
             // PHASE 2: Create reply chains from first-level nodes
             for (let i = 5; i < Math.min(10, clusterNodes.length); i++) {
                 const node = clusterNodes[i];
                 if (connectedNodes.has(node.id)) continue;
-                
+
                 // Connect to one of the first-level replies
                 const parentIdx = Math.floor(Math.random() * 4) + 1;
                 const parentNode = clusterNodes[Math.min(parentIdx, clusterNodes.length - 1)];
@@ -745,12 +824,12 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 });
                 connectedNodes.add(node.id);
             }
-            
+
             // PHASE 3: Fill remaining nodes with "related" connections for density
             for (let i = 10; i < clusterNodes.length; i++) {
                 const node = clusterNodes[i];
                 if (connectedNodes.has(node.id)) continue;
-                
+
                 // Connect to a random earlier node in the cluster
                 const targetIdx = Math.floor(Math.random() * Math.min(i, 8));
                 links.push({
@@ -760,7 +839,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 });
                 connectedNodes.add(node.id);
             }
-            
+
             // PHASE 4: Add extra intra-cluster connections for density
             // Connect some non-adjacent nodes within the cluster
             const extraConnections = Math.floor(clusterNodes.length / 3);
@@ -768,7 +847,7 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 const idx1 = Math.floor(Math.random() * clusterNodes.length);
                 const idx2 = Math.floor(Math.random() * clusterNodes.length);
                 if (idx1 !== idx2) {
-                    const existingLink = links.find(l => 
+                    const existingLink = links.find(l =>
                         (l.source === clusterNodes[idx1].id && l.target === clusterNodes[idx2].id) ||
                         (l.source === clusterNodes[idx2].id && l.target === clusterNodes[idx1].id)
                     );
@@ -782,25 +861,25 @@ export async function buildPropagationFromSearch(claim, nodeCount = 60) {
                 }
             }
         });
-        
+
         // Connect clusters together via high-impact nodes
         const highImpactNodes = nodes.filter(n => n.impressions > 5000).slice(0, 10);
         for (let i = 1; i < highImpactNodes.length; i++) {
-            const existingLink = links.find(l => 
-                (l.source === highImpactNodes[i-1].id && l.target === highImpactNodes[i].id) ||
-                (l.source === highImpactNodes[i].id && l.target === highImpactNodes[i-1].id)
+            const existingLink = links.find(l =>
+                (l.source === highImpactNodes[i - 1].id && l.target === highImpactNodes[i].id) ||
+                (l.source === highImpactNodes[i].id && l.target === highImpactNodes[i - 1].id)
             );
             if (!existingLink) {
                 // Use quote for cross-cluster, related for same-cluster
-                const type = highImpactNodes[i].clusterIdx !== highImpactNodes[i-1].clusterIdx ? 'quote' : 'related';
+                const type = highImpactNodes[i].clusterIdx !== highImpactNodes[i - 1].clusterIdx ? 'quote' : 'related';
                 links.push({
-                    source: highImpactNodes[i-1].id,
+                    source: highImpactNodes[i - 1].id,
                     target: highImpactNodes[i].id,
                     type: type
                 });
             }
         }
-        
+
         // Ensure NO isolated nodes - connect any remaining
         nodes.forEach(node => {
             if (!connectedNodes.has(node.id)) {

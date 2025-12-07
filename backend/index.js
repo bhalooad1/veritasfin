@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import debateRoutes from './routes/debate-analyzer.js';
 import claimSourcesRoutes from './routes/claim-sources.js';
 import spaceEndRoutes from './routes/space-end.js';
-import twitterService from './services/twitter.js';
+import { getThreadTweets } from './services/twitter.js';
 
 // ES module dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -1424,6 +1424,241 @@ app.post('/api/twitter/state/:key', async (req, res) => {
     });
   } catch (error) {
     console.error('Error setting bot state:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// =====================================================
+// THREAD ANALYSIS ENDPOINTS
+// =====================================================
+
+/**
+ * Analyze a Twitter thread
+ * POST /api/threads/analyze
+ */
+app.post('/api/threads/analyze', async (req, res) => {
+  try {
+    const { conversationId, triggeringTweetId, triggeringUsername } = req.body;
+
+    if (!conversationId) {
+      return res.status(400).json({
+        success: false,
+        error: 'conversationId is required'
+      });
+    }
+
+    console.log(`\n🧵 Starting thread analysis for conversation: ${conversationId}`);
+
+    // 1. Fetch all tweets in the thread
+    const threadData = await getThreadTweets(conversationId);
+
+    if (!threadData.tweets || threadData.tweets.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No tweets found in thread'
+      });
+    }
+
+    console.log(`📊 Found ${threadData.tweets.length} tweets in thread`);
+
+    // 2. Create a space for this thread
+    const { data: spaceId, error: spaceError } = await supabase.rpc('create_space', {
+      p_title: `Thread Analysis: ${conversationId}`,
+      p_space_url: `https://x.com/i/status/${conversationId}`,
+      p_metadata: {
+        type: 'thread',
+        conversation_id: conversationId,
+        triggering_tweet_id: triggeringTweetId,
+        triggering_username: triggeringUsername,
+        tweet_count: threadData.tweets.length
+      }
+    });
+
+    if (spaceError) throw spaceError;
+
+    console.log(`✅ Created space: ${spaceId}`);
+
+    // 3. Mark as not live (thread analysis is instant, not live)
+    await supabase
+      .from('spaces')
+      .update({
+        is_live: false,
+        ended_at: new Date().toISOString(),
+        summary_generated: false  // Will be set true after bot posts reply
+      })
+      .eq('id', spaceId);
+
+    // 4. Process each tweet as a message
+    const analysisPromises = [];
+
+    for (let i = 0; i < threadData.tweets.length; i++) {
+      const tweet = threadData.tweets[i];
+      const username = tweet.user?.username || 'unknown';
+      const displayName = tweet.user?.name || username;
+
+      // Create message
+      const { data: messageId, error: msgError } = await supabase.rpc('create_message', {
+        p_space_id: spaceId,
+        p_speaker_username: `@${username}`,
+        p_speaker_display_name: displayName,
+        p_content: tweet.text
+      });
+
+      if (msgError) {
+        console.error(`Error creating message for tweet ${tweet.id}:`, msgError);
+        continue;
+      }
+
+      // Queue Grok analysis (run in parallel later)
+      analysisPromises.push(
+        analyzeMessageWithGrok(messageId, tweet.text, spaceId).catch(err => {
+          console.error(`Error analyzing tweet ${tweet.id}:`, err);
+        })
+      );
+    }
+
+    // 5. Wait for all analyses to complete
+    console.log(`🔍 Running Grok analysis on ${analysisPromises.length} tweets...`);
+    await Promise.all(analysisPromises);
+    console.log(`✅ Analysis complete`);
+
+    // 6. Generate summary (but don't set summary_generated = true yet)
+    const { data: messages } = await supabase
+      .from('messages_with_speakers')
+      .select('*')
+      .eq('space_id', spaceId)
+      .eq('fact_check_status', 'completed')
+      .order('sequence_number');
+
+    // Calculate stats
+    const stats = {
+      total: messages?.length || 0,
+      true: 0,
+      false: 0,
+      misleading: 0,
+      unverified: 0
+    };
+
+    messages?.forEach(msg => {
+      const verdict = msg.grok_verdict?.toLowerCase();
+      if (stats[verdict] !== undefined) {
+        stats[verdict]++;
+      }
+    });
+
+    // Generate summary text
+    let summaryText = `🧵 Thread Analyzed (${threadData.tweets.length} tweets)\n`;
+    summaryText += `✅ TRUE: ${stats.true} | ❌ FALSE: ${stats.false} | ⚠️ MIXED: ${stats.misleading + stats.unverified}\n`;
+
+    if (stats.false > 0) {
+      summaryText += `⚠️ Found ${stats.false} false claim(s) in this thread.`;
+    } else if (stats.true > stats.false) {
+      summaryText += `📊 Thread appears mostly accurate.`;
+    } else {
+      summaryText += `📊 Mixed accuracy in this thread.`;
+    }
+
+    // Store summary but don't trigger edge function yet
+    await supabase
+      .from('spaces')
+      .update({
+        summary_text: summaryText
+        // summary_generated stays false until /complete is called
+      })
+      .eq('id', spaceId);
+
+    console.log(`✅ Thread analysis complete: ${spaceId}`);
+
+    res.json({
+      success: true,
+      spaceId: spaceId,
+      summary: summaryText,
+      stats: stats,
+      tweetCount: threadData.tweets.length
+    });
+
+  } catch (error) {
+    console.error('❌ Thread analysis error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Lookup a thread analysis by conversation ID
+ * GET /api/threads/lookup/:conversationId
+ */
+app.get('/api/threads/lookup/:conversationId', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+
+    // Query spaces where metadata contains this conversation_id
+    const { data, error } = await supabase
+      .from('spaces')
+      .select('id, title, summary_text, metadata')
+      .eq('metadata->>conversation_id', conversationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+
+    if (data) {
+      res.json({
+        success: true,
+        found: true,
+        spaceId: data.id,
+        title: data.title,
+        summary: data.summary_text
+      });
+    } else {
+      res.json({
+        success: true,
+        found: false
+      });
+    }
+
+  } catch (error) {
+    console.error('Error looking up thread:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Mark thread analysis as complete (triggers edge function)
+ * POST /api/threads/:id/complete
+ */
+app.post('/api/threads/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { error } = await supabase
+      .from('spaces')
+      .update({
+        summary_generated: true,
+        summary_generated_at: new Date().toISOString()
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+
+    console.log(`✅ Thread ${id} marked as complete (edge function triggered)`);
+
+    res.json({
+      success: true,
+      message: 'Thread analysis marked as complete'
+    });
+
+  } catch (error) {
+    console.error('Error completing thread:', error);
     res.status(500).json({
       success: false,
       error: error.message
