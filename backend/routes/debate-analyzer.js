@@ -2,7 +2,9 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import DebateParser from '../debate-parser.js';
 import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
+// Load environment variables
 dotenv.config();
 
 const router = express.Router();
@@ -574,6 +576,132 @@ Output STRICTLY VALID JSON:
 });
 
 /**
+ * Process all messages in a debate through Grok for fact-checking
+ */
+router.post('/process-debate-with-grok/:space_id', async (req, res) => {
+    try {
+        const { space_id } = req.params;
+        const supabase = getSupabase();
+
+        console.log('Processing debate messages for space:', space_id);
+
+        // Get all messages that need processing
+        const { data: messages, error: fetchError } = await supabase
+            .from('messages_with_speakers')
+            .select('*')
+            .eq('space_id', space_id)
+            .eq('fact_check_status', 'pending')
+            .order('sequence_number');
+
+        if (fetchError) throw fetchError;
+
+        console.log(`Found ${messages.length} messages to process`);
+
+        if (messages.length === 0) {
+            return res.json({
+                success: true,
+                message: 'No messages to process',
+                processed: 0
+            });
+        }
+
+        // Process messages through Grok (similar to the existing fact-check endpoint)
+        let processedCount = 0;
+        let errorCount = 0;
+        const results = [];
+
+        // Process in smaller batches to avoid overwhelming the API
+        const batchSize = 3;
+        for (let i = 0; i < messages.length; i += batchSize) {
+            const batch = messages.slice(i, i + batchSize);
+
+            // Process batch in parallel
+            const batchPromises = batch.map(async (message) => {
+                try {
+                    // Call the fact-check endpoint
+                    const response = await fetch('http://localhost:3000/api/spaces/fact-check', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            messageId: message.id,
+                            spaceId: space_id
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        processedCount++;
+                        results.push({
+                            messageId: message.id,
+                            speaker: message.speaker_display_name,
+                            status: 'processed',
+                            data: data
+                        });
+                        console.log(`✓ Processed message ${message.id} from ${message.speaker_display_name}`);
+                    } else {
+                        throw new Error(`Failed to process message ${message.id}`);
+                    }
+                } catch (error) {
+                    console.error(`Error processing message ${message.id}:`, error);
+                    errorCount++;
+                    results.push({
+                        messageId: message.id,
+                        speaker: message.speaker_display_name,
+                        status: 'error',
+                        error: error.message
+                    });
+                }
+            });
+
+            // Wait for batch to complete
+            await Promise.all(batchPromises);
+
+            // Add delay between batches to respect rate limits
+            if (i + batchSize < messages.length) {
+                console.log(`Batch complete. Waiting 2 seconds before next batch...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+        }
+
+        // Get updated statistics
+        const { data: updatedMessages } = await supabase
+            .from('messages_with_speakers')
+            .select('*')
+            .eq('space_id', space_id)
+            .order('sequence_number');
+
+        // Calculate statistics
+        const stats = {
+            total: updatedMessages.length,
+            processed: updatedMessages.filter(m => m.fact_check_status === 'completed').length,
+            pending: updatedMessages.filter(m => m.fact_check_status === 'pending').length,
+            errors: errorCount,
+            averageTruthScore: 0
+        };
+
+        // Calculate average truth score
+        const messagesWithScores = updatedMessages.filter(m => m.truth_score !== null);
+        if (messagesWithScores.length > 0) {
+            const totalScore = messagesWithScores.reduce((sum, m) => sum + m.truth_score, 0);
+            stats.averageTruthScore = Math.round(totalScore / messagesWithScores.length);
+        }
+
+        res.json({
+            success: true,
+            space_id: space_id,
+            processed: processedCount,
+            errors: errorCount,
+            statistics: stats,
+            results: results
+        });
+
+    } catch (error) {
+        console.error('Error processing debate with Grok:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * Get analysis results for a debate
  */
 router.get('/debate-results/:space_id', async (req, res) => {
@@ -652,6 +780,66 @@ router.get('/debate-results/:space_id', async (req, res) => {
     } catch (error) {
         console.error('Error getting debate results:', error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Analyze consistency with past statements
+ */
+router.post('/consistency', async (req, res) => {
+    try {
+        const { speaker, claim, topic } = req.body;
+
+        // In a real app, we would search a vector DB of past tweets.
+        // Here, we'll use Grok to simulate the analysis based on its knowledge base.
+
+        const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'grok-4-1-fast-reasoning',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `You are a political analyst checking for consistency.
+                        
+                        Analyze the consistency of the speaker's current claim with their known past positions/tweets.
+                        
+                        Return JSON:
+                        {
+                            "score": 1-10 (10 = perfectly consistent),
+                            "verdict": "Consistent" | "Evolving" | "Contradictory",
+                            "analysis": "Brief explanation...",
+                            "past_tweets": [
+                                { "date": "Approx Date", "text": "A representative past statement..." },
+                                { "date": "Approx Date", "text": "Another past statement..." }
+                            ]
+                        }`
+                    },
+                    {
+                        role: 'user',
+                        content: `Speaker: ${speaker}\nTopic: ${topic}\nCurrent Claim: "${claim}"`
+                    }
+                ],
+                temperature: 0.1
+            })
+        });
+
+        const data = await grokResponse.json();
+        const content = data.choices[0]?.message?.content;
+
+        // Extract JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 5, verdict: "Unknown", analysis: "Could not parse analysis", past_tweets: [] };
+
+        res.json({ success: true, ...result });
+
+    } catch (error) {
+        console.error('Consistency analysis error:', error);
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

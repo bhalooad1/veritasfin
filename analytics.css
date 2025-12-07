@@ -116,6 +116,7 @@ header {
     gap: 20px;
     flex-grow: 1;
     min-height: 0;
+    align-items: start;
     /* Important for nested scrolling */
 }
 
@@ -123,6 +124,7 @@ header {
     display: flex;
     flex-direction: column;
     gap: 15px;  /* Increased gap for better visual separation */
+    height: 100%;
 }
 
 /* Widgets */
@@ -135,10 +137,10 @@ header {
 
 .timeline-widget {
     grid-row: 1 / span 2;
-    height: 600px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Height will match sidebar content automatically */
 }
 
 .stats-widget {
