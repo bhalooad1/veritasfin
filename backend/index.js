@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import debateAnalyzerRoutes from './routes/debate-analyzer.js';
+import claimSourcesRoutes from './routes/claim-sources.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get('/api/health', (req, res) => {
 
 // Mount debate analyzer routes
 app.use('/api/debate', debateAnalyzerRoutes);
+app.use('/api/claims', claimSourcesRoutes);
 
 app.listen(PORT, () => {
     console.log(`🚀 Veritas API running on port ${PORT}`);
