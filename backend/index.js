@@ -1376,6 +1376,61 @@ app.get('/api/twitter/config', (req, res) => {
   });
 });
 
+// Get bot state from Supabase
+app.get('/api/twitter/state/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+
+    const { data, error } = await supabase
+      .from('bot_state')
+      .select('value')
+      .eq('key', key)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+
+    res.json({
+      success: true,
+      value: data?.value || null
+    });
+  } catch (error) {
+    console.error('Error getting bot state:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Set bot state in Supabase
+app.post('/api/twitter/state/:key', async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value } = req.body;
+
+    const { error } = await supabase
+      .from('bot_state')
+      .upsert({
+        key: key,
+        value: value,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'State updated'
+    });
+  } catch (error) {
+    console.error('Error setting bot state:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // =====================================================
 // START SERVER
 // =====================================================
