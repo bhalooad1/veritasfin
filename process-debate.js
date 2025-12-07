@@ -157,6 +157,14 @@ async function processDebate() {
 
         console.log('Expected messages:', analyzeData.expected_messages || 'unknown');
         console.log('Actually processed:', analyzeData.messages_processed || 0);
+
+        // Display full Grok response for debugging
+        if (analyzeData.grok_full_response) {
+            console.group('🤖 FULL GROK RESPONSE');
+            console.log(JSON.stringify(analyzeData.grok_full_response, null, 2));
+            console.groupEnd();
+        }
+
         console.groupEnd();
 
         if (!analyzeData.success) {

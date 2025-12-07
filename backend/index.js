@@ -5,6 +5,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import debateRoutes from './routes/debate-analyzer.js';
+import claimSourcesRoutes from './routes/claim-sources.js';
+import spaceEndRoutes from './routes/space-end.js';
 import twitterService from './services/twitter.js';
 
 // ES module dirname equivalent
@@ -367,6 +369,10 @@ async function analyzeMessageWithGrok(messageId, content, spaceId) {
       .update({ fact_check_status: 'processing' })
       .eq('id', messageId);
 
+    console.log(`\n🔍 Processing message ${messageId}`);
+    console.log(`📨 Content: "${content}"`);
+    console.log(`📏 Content length: ${content.length} characters`);
+
     // Call Grok API (xAI uses OpenAI-compatible endpoint)
     const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
       method: 'POST',
@@ -375,73 +381,84 @@ async function analyzeMessageWithGrok(messageId, content, spaceId) {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-4-1-fast-reasoning',
+        model: 'grok-4-1-fast-reasoning', // Fast model for widget (Chrome extension)
         messages: [
           {
             role: 'system',
-            content: `You are a precise fact-checking assistant. ALWAYS extract and analyze ALL factual claims, especially dangerous misinformation about health, safety, or medical topics.
+            content: `You are a fact-checking AI. Extract and verify factual claims, EVEN when embedded in casual language or opinion statements.
 
-INSTRUCTIONS:
-1. PARSE INTELLIGENTLY - Keep related statements together:
-   - Resolve pronouns (they/it/this) to their antecedents BEFORE splitting
-   - Keep comparisons as single claims (X is better than Y)
-   - Connected thoughts about same topic = one claim
-2. ONLY extract factual claims that can be verified:
-   - Skip pure jokes/metaphors with NO factual content
-   - Extract ANY verifiable claim about health/science/facts (even if said jokingly)
-   - "X is bad for health" or "Y is the best healthwise" = FACTUAL CLAIM to check
-3. SCORE each factual claim (1-10)
-4. PROVIDE brief explanation for each
-5. INCLUDE credible source URLs for factual claims
-6. CRITICAL GROKIPEDIA RULE: Use REAL Wikipedia article names (Doughnut, Strawberry, Nutrition)
-7. Only skip pure greetings/filler
+=== WHAT TO EXTRACT ===
+✅ FACTUAL CLAIMS (extract these - even if phrased casually):
+- Statistics & numbers: "Unemployment is 3.5%", "21 million people crossed the border"
+- Historical events: "He appointed three justices", "The bill passed in 2022"
+- Verifiable statements: "He tweeted 'thank you'", "The law provides life in prison"
+- Scientific/medical facts: "Vaccines contain mercury", "COVID originated in China"
+- Economic/efficiency claims: "nuclear energy is a waste of money", "solar is more efficient than nuclear"
+- Comparative claims: "X is better/worse/more expensive than Y" (if objectively measurable)
+- Claims about news/studies: "I heard in the news that X" → verify if X is actually true
+- Casual factual statements: "I heard that...", "they say that..." → extract and verify the underlying claim
 
-EXAMPLES:
-"strawberries are coming back for you and they suck for health" →
-ONE CLAIM: "strawberries suck for health" (extract the health claim, skip the joke)
+⚠️ IMPORTANT: Don't be fooled by casual phrasing!
+- "I heard nuclear is a waste of money" → EXTRACT: "nuclear energy is a waste of money" (verifiable!)
+- "I think solar is more efficient" → EXTRACT: "solar is more efficient" (verifiable!)
+- "all I've seen in the news is..." → EXTRACT the factual claim being referenced
 
-"I love this movie it's so beautiful" →
-NO CLAIMS: Skip - no factual content to verify
+❌ PURE OPINIONS (skip these):
+- Pure value judgments: "She's radical", "He's terrible", "This is immoral"
+- Predictions: "This will destroy America", "We will win"
+- Subjective preferences: "I prefer...", "The best approach is..." (without factual basis)
+- Vague statements: "I heard there's a new study" (no specific claim)
 
-Rating scale:
-- 9-10: Verified fact with strong evidence
+=== SOURCE REQUIREMENTS ===
+⚠️ CRITICAL: Use ONLY these approved URLs. NO other URLs allowed.
+
+APPROVED SOURCES (use ONLY base domains):
+- https://www.factcheck.org/
+- https://www.politifact.com/
+- https://www.snopes.com/
+- https://www.census.gov/
+- https://www.bls.gov/
+- https://www.cdc.gov/
+- https://www.reuters.com/
+- https://apnews.com/
+- https://www.npr.org/
+
+GROKIPEDIA (REQUIRED - last source):
+Format: https://grokipedia.com/page/[Wikipedia_Article]
+Examples: COVID-19_pandemic, Abortion_in_the_United_States, United_States_federal_budget
+
+RULES:
+1. Use ONLY base domain URLs (no article paths)
+2. Every claim needs 1 Grokipedia link
+3. 2-3 sources total per claim
+
+=== SCORING ===
+- 9-10: Verified fact, strong evidence
 - 7-8: Mostly true, minor issues
-- 5-6: Mixed truth or lacks context
+- 5-6: Mixed or lacks context
 - 3-4: Mostly false
 - 1-2: Completely false
 
-COMMON WIKIPEDIA ARTICLES TO USE FOR GROKIPEDIA:
-Food/Health: Doughnut, Fast_food, Obesity, Weight_loss, Diet_(nutrition), Nutrition
-Tech: Artificial_intelligence, Computer, Internet, Software, Social_media
-Climate: Climate_change, Global_warming, Renewable_energy, Pollution
-General: United_States, Economics, Politics, Education, Science, Medicine
-- GROKIPEDIA REQUIREMENT: Use ONLY real Wikipedia article titles as topics
-- Format: https://grokipedia.com/page/[Exact_Wikipedia_Title]
-- Examples of VALID topics:
-  * For weight/diet claims: Obesity, Weight_loss, Dieting, Nutrition
-  * For health claims: Medicine, Disease, Public_health
-  * For tech claims: Artificial_intelligence, Computer_science, Internet
-  * For climate claims: Climate_change, Global_warming, Greenhouse_gas
-- First try specific topic (e.g., "Donut" for donut claim)
-- If too specific, use broader category (e.g., "Junk_food" or "Weight_management")
-- MANDATORY: Every claim MUST end with a valid Grokipedia link
-
-Respond in this EXACT JSON format:
+=== OUTPUT FORMAT ===
 {
   "claims": [
     {
-      "text": "exact claim quoted",
-      "score": 1-10,
+      "text": "exact factual claim",
+      "score": 8,
       "verdict": "TRUE/FALSE/MIXED/UNVERIFIABLE",
-      "explanation": "15 words max explanation",
-      "sources": ["https://healthline.com/article", "https://mayoclinic.org/info", "https://grokipedia.com/page/Obesity"]
+      "explanation": "Brief explanation with evidence",
+      "sources": [
+        "https://real-source-1.gov/page",
+        "https://www.factcheck.org/2024/article",
+        "https://grokipedia.com/page/Topic"
+      ]
     }
   ],
-  "truth_score": 1-10,
-  "summary": "One sentence overall assessment (20 words max)"
+  "truth_score": 8,
+  "summary": "Overall assessment"
 }
 
-If no factual claims exist, return:
+If NO factual claims (only opinions):
 {
   "claims": [],
   "truth_score": null,
@@ -466,13 +483,20 @@ If no factual claims exist, return:
     const grokContent = grokData.choices[0].message.content;
 
     // Debug logging
-    console.log('📝 Grok raw response:', grokContent);
+    console.log('\n=== GROK RESPONSE DEBUG ===');
+    console.log('📝 Raw Grok response:', grokContent);
+    console.log('📝 Response length:', grokContent.length);
+    console.log('📝 Response type:', typeof grokContent);
 
     // Parse Grok's JSON response
     let analysisResult;
     try {
       analysisResult = JSON.parse(grokContent);
+      console.log('✅ Successfully parsed Grok JSON');
+      console.log('📊 Parsed result:', JSON.stringify(analysisResult, null, 2));
     } catch (e) {
+      console.error('❌ Failed to parse Grok response:', e.message);
+      console.error('❌ Invalid JSON content:', grokContent);
       // If Grok didn't return valid JSON, create a default response
       analysisResult = {
         claims: [],
@@ -484,6 +508,22 @@ If no factual claims exist, return:
     const truthScore = analysisResult.truth_score;
     const summary = analysisResult.summary || analysisResult.explanation || 'No explanation provided.';
     const claims = analysisResult.claims || [];
+
+    console.log('📊 Extracted data:');
+    console.log('  - Truth Score:', truthScore);
+    console.log('  - Summary:', summary);
+    console.log('  - Number of claims:', claims.length);
+    if (claims.length > 0) {
+      claims.forEach((claim, idx) => {
+        console.log(`  - Claim ${idx + 1}:`, {
+          text: claim.text,
+          score: claim.score,
+          verdict: claim.verdict,
+          sources: claim.sources?.length || 0
+        });
+      });
+    }
+    console.log('=== END GROK RESPONSE DEBUG ===\n');
 
     // Handle cases where no factual claims exist
     if (truthScore === null || truthScore === undefined) {
@@ -574,73 +614,84 @@ app.post('/api/test-analysis', async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-4-1-fast-reasoning',
+        model: 'grok-4-0709', // Best model for maximum accuracy
         messages: [
           {
             role: 'system',
-            content: `You are a precise fact-checking assistant. ALWAYS extract and analyze ALL factual claims, especially dangerous misinformation about health, safety, or medical topics.
+            content: `You are a fact-checking AI. Extract and verify factual claims, EVEN when embedded in casual language or opinion statements.
 
-INSTRUCTIONS:
-1. PARSE INTELLIGENTLY - Keep related statements together:
-   - Resolve pronouns (they/it/this) to their antecedents BEFORE splitting
-   - Keep comparisons as single claims (X is better than Y)
-   - Connected thoughts about same topic = one claim
-2. ONLY extract factual claims that can be verified:
-   - Skip pure jokes/metaphors with NO factual content
-   - Extract ANY verifiable claim about health/science/facts (even if said jokingly)
-   - "X is bad for health" or "Y is the best healthwise" = FACTUAL CLAIM to check
-3. SCORE each factual claim (1-10)
-4. PROVIDE brief explanation for each
-5. INCLUDE credible source URLs for factual claims
-6. CRITICAL GROKIPEDIA RULE: Use REAL Wikipedia article names (Doughnut, Strawberry, Nutrition)
-7. Only skip pure greetings/filler
+=== WHAT TO EXTRACT ===
+✅ FACTUAL CLAIMS (extract these - even if phrased casually):
+- Statistics & numbers: "Unemployment is 3.5%", "21 million people crossed the border"
+- Historical events: "He appointed three justices", "The bill passed in 2022"
+- Verifiable statements: "He tweeted 'thank you'", "The law provides life in prison"
+- Scientific/medical facts: "Vaccines contain mercury", "COVID originated in China"
+- Economic/efficiency claims: "nuclear energy is a waste of money", "solar is more efficient than nuclear"
+- Comparative claims: "X is better/worse/more expensive than Y" (if objectively measurable)
+- Claims about news/studies: "I heard in the news that X" → verify if X is actually true
+- Casual factual statements: "I heard that...", "they say that..." → extract and verify the underlying claim
 
-EXAMPLES:
-"strawberries are coming back for you and they suck for health" →
-ONE CLAIM: "strawberries suck for health" (extract the health claim, skip the joke)
+⚠️ IMPORTANT: Don't be fooled by casual phrasing!
+- "I heard nuclear is a waste of money" → EXTRACT: "nuclear energy is a waste of money" (verifiable!)
+- "I think solar is more efficient" → EXTRACT: "solar is more efficient" (verifiable!)
+- "all I've seen in the news is..." → EXTRACT the factual claim being referenced
 
-"I love this movie it's so beautiful" →
-NO CLAIMS: Skip - no factual content to verify
+❌ PURE OPINIONS (skip these):
+- Pure value judgments: "She's radical", "He's terrible", "This is immoral"
+- Predictions: "This will destroy America", "We will win"
+- Subjective preferences: "I prefer...", "The best approach is..." (without factual basis)
+- Vague statements: "I heard there's a new study" (no specific claim)
 
-Rating scale:
-- 9-10: Verified fact with strong evidence
+=== SOURCE REQUIREMENTS ===
+⚠️ CRITICAL: Use ONLY these approved URLs. NO other URLs allowed.
+
+APPROVED SOURCES (use ONLY base domains):
+- https://www.factcheck.org/
+- https://www.politifact.com/
+- https://www.snopes.com/
+- https://www.census.gov/
+- https://www.bls.gov/
+- https://www.cdc.gov/
+- https://www.reuters.com/
+- https://apnews.com/
+- https://www.npr.org/
+
+GROKIPEDIA (REQUIRED - last source):
+Format: https://grokipedia.com/page/[Wikipedia_Article]
+Examples: COVID-19_pandemic, Abortion_in_the_United_States, United_States_federal_budget
+
+RULES:
+1. Use ONLY base domain URLs (no article paths)
+2. Every claim needs 1 Grokipedia link
+3. 2-3 sources total per claim
+
+=== SCORING ===
+- 9-10: Verified fact, strong evidence
 - 7-8: Mostly true, minor issues
-- 5-6: Mixed truth or lacks context
+- 5-6: Mixed or lacks context
 - 3-4: Mostly false
 - 1-2: Completely false
 
-COMMON WIKIPEDIA ARTICLES TO USE FOR GROKIPEDIA:
-Food/Health: Doughnut, Fast_food, Obesity, Weight_loss, Diet_(nutrition), Nutrition
-Tech: Artificial_intelligence, Computer, Internet, Software, Social_media
-Climate: Climate_change, Global_warming, Renewable_energy, Pollution
-General: United_States, Economics, Politics, Education, Science, Medicine
-- GROKIPEDIA REQUIREMENT: Use ONLY real Wikipedia article titles as topics
-- Format: https://grokipedia.com/page/[Exact_Wikipedia_Title]
-- Examples of VALID topics:
-  * For weight/diet claims: Obesity, Weight_loss, Dieting, Nutrition
-  * For health claims: Medicine, Disease, Public_health
-  * For tech claims: Artificial_intelligence, Computer_science, Internet
-  * For climate claims: Climate_change, Global_warming, Greenhouse_gas
-- First try specific topic (e.g., "Donut" for donut claim)
-- If too specific, use broader category (e.g., "Junk_food" or "Weight_management")
-- MANDATORY: Every claim MUST end with a valid Grokipedia link
-
-Respond in this EXACT JSON format:
+=== OUTPUT FORMAT ===
 {
   "claims": [
     {
-      "text": "exact claim quoted",
-      "score": 1-10,
+      "text": "exact factual claim",
+      "score": 8,
       "verdict": "TRUE/FALSE/MIXED/UNVERIFIABLE",
-      "explanation": "15 words max explanation",
-      "sources": ["https://healthline.com/article", "https://mayoclinic.org/info", "https://grokipedia.com/page/Obesity"]
+      "explanation": "Brief explanation with evidence",
+      "sources": [
+        "https://real-source-1.gov/page",
+        "https://www.factcheck.org/2024/article",
+        "https://grokipedia.com/page/Topic"
+      ]
     }
   ],
-  "truth_score": 1-10,
-  "summary": "One sentence overall assessment (20 words max)"
+  "truth_score": 8,
+  "summary": "Overall assessment"
 }
 
-If no factual claims exist, return:
+If NO factual claims (only opinions):
 {
   "claims": [],
   "truth_score": null,
@@ -1265,7 +1316,7 @@ app.post('/api/grokipedia/chat', async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'grok-4-1-fast-reasoning',
+        model: 'grok-4-1-fast-non-reasoning',
         messages: [
           {
             role: 'system',
@@ -1294,6 +1345,8 @@ app.post('/api/grokipedia/chat', async (req, res) => {
 // =====================================================
 
 app.use('/api/debate', debateRoutes);
+app.use('/api/claims', claimSourcesRoutes);
+app.use('/api/spaces', spaceEndRoutes);
 
 // =====================================================
 // START SERVER

@@ -22,7 +22,8 @@
         "https://x.com/*"
       ],
       "js": [
-        "content-simple.js"
+        "content-simple.js",
+        "space-end-detector.js"
       ],
       "css": [
         "overlay.css"

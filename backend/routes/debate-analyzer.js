@@ -3,7 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import DebateParser from '../debate-parser.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
+<<<<<<< HEAD
 import twitterService from '../services/twitter.js';
+=======
+>>>>>>> origin/main
 
 // Load environment variables
 dotenv.config();
@@ -170,9 +173,15 @@ router.post('/analyze-transcript', async (req, res) => {
                 console.log('Calling Grok API...');
                 const startTime = Date.now();
 
+<<<<<<< HEAD
                 // Call Grok with the entire debate at once - with 60 second timeout
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 300000); // 300 second timeout (5 mins)
+=======
+                // Call Grok with the entire debate at once - with extended timeout for best model
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 600000); // 600 second timeout (10 mins)
+>>>>>>> origin/main
 
                 const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
                     method: 'POST',
@@ -182,6 +191,7 @@ router.post('/analyze-transcript', async (req, res) => {
                     },
                     signal: controller.signal,
                     body: JSON.stringify({
+<<<<<<< HEAD
                         model: 'grok-4-1-fast-reasoning',
                         messages: [
                             {
@@ -240,14 +250,138 @@ Return a SINGLE JSON object containing a 'messages' array:
                                 "Donald Trump": 65
                               }
                             }`
+=======
+                        model: 'grok-4-0709', // Best model for maximum accuracy
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `You are a precise fact-checking AI analyzing a political debate. Your goal is to extract and verify ONLY factual claims, not opinions.
+
+=== CORE PRINCIPLES ===
+1. FACTUAL CLAIMS ONLY - Extract claims that can be objectively verified with evidence
+   ✅ EXTRACT: "Unemployment is at 3.5%", "The bill passed in 2022", "China is our largest trading partner"
+   ❌ SKIP: "This is the best policy", "He's a terrible leader", "I believe we should...", "This will destroy America"
+
+2. IGNORE OPINIONS, PREDICTIONS, AND SUBJECTIVE STATEMENTS
+   - Opinions: "She's radical", "He's out of it", "This is immoral"
+   - Predictions: "This will end our country", "We will win"
+   - Subjective value judgments: "Great", "Horrible", "Excellent"
+
+3. EXTRACT HISTORICAL FACTS, STATISTICS, AND VERIFIABLE EVENTS
+   - What someone said/did (if verifiable): "He tweeted 'Thank you President Xi'"
+   - Statistical claims: "21 million people crossed the border"
+   - Historical events: "He appointed three Supreme Court justices"
+   - Policy descriptions: "The law provides life in prison"
+
+=== SOURCE REQUIREMENTS ===
+⚠️ CRITICAL: Provide credible sources. If you're not 100% certain a URL exists, describe the source instead.
+
+**SOURCE FORMAT OPTIONS:**
+
+**Option 1 - Descriptive Source (USE THIS when unsure of exact URL):**
+Instead of guessing URLs, provide a description:
+- "FactCheck.org analysis of [topic]"
+- "PolitiFact fact-check on [claim]"
+- "U.S. Census Bureau data on [statistic]"
+- "Supreme Court opinion in [case name]"
+
+**Option 2 - Known URL Patterns (ONLY use if you're certain):**
+FACT-CHECKING:
+- https://www.factcheck.org/ (only if you know the exact article path)
+- https://www.politifact.com/ (only if you know the exact article path)
+
+GOVERNMENT (use only for specific data):
+- https://www.census.gov/
+- https://www.bls.gov/
+- https://www.cdc.gov/
+
+**GROKIPEDIA (REQUIRED - always include as last source):**
+Format: https://grokipedia.com/page/[Wikipedia_Article_Title]
+
+Common Wikipedia articles (use exact names):
+- Abortion: Abortion_in_the_United_States, Dobbs_v._Jackson_Women%27s_Health_Organization, Roe_v._Wade
+- Immigration: Illegal_immigration_to_the_United_States, Immigration_to_the_United_States
+- Trade: China%E2%80%93United_States_trade_war, International_trade
+- COVID: COVID-19_pandemic, COVID-19_pandemic_in_the_United_States
+- Economy: Economy_of_the_United_States, United_States_federal_budget
+- Supreme Court: Supreme_Court_of_the_United_States, List_of_justices_of_the_Supreme_Court_of_the_United_States
+
+**EXAMPLES:**
+
+Good sources ✅:
+  "FactCheck.org analysis of Trump's Supreme Court appointments"
+  "U.S. Census Bureau trade deficit statistics"
+  "https://grokipedia.com/page/Supreme_Court_of_the_United_States"
+
+Bad sources ❌:
+  "https://www.factcheck.org/2024/trump-abortion-claims/" (Don't guess article paths)
+  "https://www.state.gov/covid-origins/" (Don't make up URLs)
+
+**RULES:**
+1. When uncertain about specific URL, use descriptive source instead
+2. ALWAYS include 1 Grokipedia link (last source)
+3. Provide 2-3 sources per claim
+4. Descriptive sources are better than fake URLs
+
+=== VERDICT SCALE ===
+Use ONLY these values:
+- TRUE (score 8-10): Fully accurate, well-documented
+- MOSTLY TRUE (score 6-7): Largely accurate with minor issues
+- MIXED (score 4-5): Partially true and partially false
+- MOSTLY FALSE (score 2-3): Largely inaccurate
+- FALSE (score 1): Completely false, no factual basis
+- UNVERIFIABLE: Cannot be confirmed with available sources
+
+=== JSON FORMAT ===
+Output STRICTLY VALID JSON:
+- ESCAPE double quotes: "He said \\"hello\\""
+- NO markdown code blocks
+- NO text outside JSON
+- Process ALL speaker statements
+
+{
+  "messages": [
+    {
+      "speaker": "Speaker Name",
+      "content": "Their full statement",
+      "sequence_number": 1,
+      "truth_score": 7,
+      "verdict": "MOSTLY TRUE",
+      "explanation": "Brief overall assessment",
+      "claims": [
+        {
+          "text": "Exact factual claim extracted",
+          "score": 8,
+          "verdict": "TRUE",
+          "explanation": "Why this is true/false with specific evidence",
+          "sources": [
+            "https://real-government-source.gov/data",
+            "https://www.factcheck.org/2024/article",
+            "https://grokipedia.com/page/Relevant_Topic"
+          ]
+        }
+      ]
+    }
+  ],
+  "overall_credibility": {
+    "Speaker 1": 75,
+    "Speaker 2": 45
+  }
+}`
+>>>>>>> origin/main
                             },
                             {
                                 role: 'user',
                                 content: `Analyze this debate transcript:\n\n${debateDialogue}`
                             }
                         ],
+<<<<<<< HEAD
                         temperature: 0.1, // Lower temperature for more consistent formatting
                         max_tokens: 8000  // Increased for longer debates
+=======
+                        temperature: 0.2, // Balanced for accuracy and consistency
+                        max_tokens: 16000  // Increased for comprehensive analysis
+>>>>>>> origin/main
                     })
                 });
 
@@ -507,7 +641,12 @@ Return a SINGLE JSON object containing a 'messages' array:
             grok_analysis_completed: grokAnalysis !== null,
             overall_score: averageScore,
             debug_info: debugInfo,
+<<<<<<< HEAD
             expected_messages: parsedMessages.length
+=======
+            expected_messages: parsedMessages.length,
+            grok_full_response: grokAnalysis  // Full Grok response for debugging
+>>>>>>> origin/main
         });
 
     } catch (error) {
@@ -726,6 +865,7 @@ router.get('/debate-results/:space_id', async (req, res) => {
 
 /**
  * Analyze consistency with past statements
+<<<<<<< HEAD
  * Aggregates data from X timeline + web search before Grok analysis
  */
 router.post('/consistency', async (req, res) => {
@@ -1011,6 +1151,15 @@ Return JSON with score, x_score, web_score, verdict, analysis (100-150 words ref
 Current claim by ${speaker}: "${claim}"
 Note: No X timeline data available. Use your knowledge of ${speaker}'s public record but indicate lower confidence.
 If you don't have knowledge of ${speaker}'s past statements on this topic, return "Insufficient Data".`;
+=======
+ */
+router.post('/consistency', async (req, res) => {
+    try {
+        const { speaker, claim, topic } = req.body;
+
+        // In a real app, we would search a vector DB of past tweets.
+        // Here, we'll use Grok to simulate the analysis based on its knowledge base.
+>>>>>>> origin/main
 
         const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
             method: 'POST',
@@ -1023,6 +1172,7 @@ If you don't have knowledge of ${speaker}'s past statements on this topic, retur
                 messages: [
                     {
                         role: 'system',
+<<<<<<< HEAD
                         content: `You analyze whether a SPEAKER's current claim is consistent with THEIR OWN past statements.
 
 IMPORTANT: You are checking if THIS PERSON (the speaker) has been consistent with their OWN past positions, NOT whether the claim is true or supported by others.
@@ -1052,6 +1202,26 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
                     {
                         role: 'user',
                         content: analysisPrompt
+=======
+                        content: `You are a political analyst checking for consistency.
+                        
+                        Analyze the consistency of the speaker's current claim with their known past positions/tweets.
+                        
+                        Return JSON:
+                        {
+                            "score": 1-10 (10 = perfectly consistent),
+                            "verdict": "Consistent" | "Evolving" | "Contradictory",
+                            "analysis": "Brief explanation...",
+                            "past_tweets": [
+                                { "date": "Approx Date", "text": "A representative past statement..." },
+                                { "date": "Approx Date", "text": "Another past statement..." }
+                            ]
+                        }`
+                    },
+                    {
+                        role: 'user',
+                        content: `Speaker: ${speaker}\nTopic: ${topic}\nCurrent Claim: "${claim}"`
+>>>>>>> origin/main
                     }
                 ],
                 temperature: 0.1
@@ -1061,6 +1231,7 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
         const data = await grokResponse.json();
         const content = data.choices[0]?.message?.content;
 
+<<<<<<< HEAD
         // Robust JSON extraction with error handling
         let result;
         try {
@@ -1146,6 +1317,11 @@ If you cannot find relevant past statements BY THIS SPEAKER, return verdict "Ins
         result.data_source = dataSource;
 
         console.log(`Consistency analysis complete: ${result.verdict} (${result.score}/10) from ${dataSource}`);
+=======
+        // Extract JSON
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 5, verdict: "Unknown", analysis: "Could not parse analysis", past_tweets: [] };
+>>>>>>> origin/main
 
         res.json({ success: true, ...result });
 
