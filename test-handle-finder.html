@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Handle Finder Test - VERITAS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #fff;
+            font-family: "SF Mono", "Monaco", monospace;
+            padding: 40px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 16px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        .test-box {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid #333;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: transparent;
+            border: 1px solid #fff;
+            color: #fff;
+            font-family: inherit;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #fff;
+            color: #000;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #333;
+            font-size: 11px;
+            display: none;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result.success {
+            border-color: #00ba7c;
+            color: #00ba7c;
+        }
+
+        .result.error {
+            border-color: #f91880;
+            color: #f91880;
+        }
+
+        .result.loading {
+            border-color: #ffd700;
+            color: #ffd700;
+        }
+
+        .handle-display {
+            font-size: 24px;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .examples {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid #222;
+        }
+
+        .examples h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .example-link {
+            display: inline-block;
+            margin-right: 15px;
+            margin-top: 5px;
+            color: #00ba7c;
+            text-decoration: none;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .example-link:hover {
+            text-decoration: underline;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #333;
+            border-top-color: #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 TWITTER HANDLE FINDER</h1>
+
+        <div class="test-box">
+            <label for="speakerName">ENTER SPEAKER NAME</label>
+            <input type="text" id="speakerName" placeholder="e.g., MKBHD, Elon Musk, Taylor Swift"
+                autocomplete="off">
+            <button id="findBtn">FIND HANDLE</button>
+
+            <div id="result" class="result"></div>
+        </div>
+
+        <div class="examples">
+            <h3>TRY THESE EXAMPLES:</h3>
+            <a class="example-link" data-name="MKBHD">MKBHD</a>
+            <a class="example-link" data-name="Marques Brownlee">Marques Brownlee</a>
+            <a class="example-link" data-name="Elon Musk">Elon Musk</a>
+            <a class="example-link" data-name="Donald Trump">Donald Trump</a>
+            <a class="example-link" data-name="Joe Biden">Joe Biden</a>
+            <a class="example-link" data-name="Mr Beast">Mr Beast</a>
+            <a class="example-link" data-name="Taylor Swift">Taylor Swift</a>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('speakerName');
+        const btn = document.getElementById('findBtn');
+        const result = document.getElementById('result');
+
+        // Allow Enter key to submit
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                findHandle();
+            }
+        });
+
+        // Button click
+        btn.addEventListener('click', findHandle);
+
+        // Example links
+        document.querySelectorAll('.example-link').forEach(link => {
+            link.addEventListener('click', () => {
+                input.value = link.dataset.name;
+                findHandle();
+            });
+        });
+
+        async function findHandle() {
+            const name = input.value.trim();
+            if (!name) {
+                showResult('error', 'Please enter a speaker name');
+                return;
+            }
+
+            console.log('Finding handle for:', name);
+            btn.disabled = true;
+            showResult('loading', '<span class="spinner"></span>SEARCHING FOR TWITTER HANDLE...');
+
+            try {
+                const response = await fetch('http://localhost:3000/api/debate/find-handle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+
+                const data = await response.json();
+                console.log('Response:', data);
+
+                if (data.success) {
+                    showResult('success',
+                        `<strong>FOUND!</strong><div class="handle-display">${data.handle}</div><br>Name: ${data.name}`
+                    );
+                } else {
+                    showResult('error', `ERROR: ${data.error}`);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showResult('error', `ERROR: ${error.message}<br><br>Make sure the backend server is running on port 3000`);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showResult(type, message) {
+            result.className = `result active ${type}`;
+            result.innerHTML = message;
+        }
+    </script>
+</body>
+
+</html>
+

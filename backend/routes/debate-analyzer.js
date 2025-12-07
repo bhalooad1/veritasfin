@@ -4,6 +4,7 @@ import DebateParser from '../debate-parser.js';
 import dotenv from 'dotenv';
 import fetch from 'node-fetch';
 import twitterService from '../services/twitter.js';
+import { findTwitterHandle, findMultipleHandles } from '../utils/handle-finder.js';
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +18,39 @@ function getSupabase() {
         process.env.SUPABASE_SERVICE_KEY
     );
 }
+
+/**
+ * Find Twitter handle for a speaker
+ * Test endpoint: POST /api/debate/find-handle with body: { "name": "MKBHD" }
+ */
+router.post('/find-handle', async (req, res) => {
+    try {
+        const { name } = req.body;
+        
+        if (!name) {
+            return res.status(400).json({
+                success: false,
+                error: 'Speaker name is required'
+            });
+        }
+
+        console.log(`🔍 Finding handle for: ${name}`);
+        const handle = await findTwitterHandle(name);
+
+        res.json({
+            success: true,
+            name: name,
+            handle: handle
+        });
+
+    } catch (error) {
+        console.error('Error finding handle:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 /**
  * Create a new debate analysis space
@@ -60,9 +94,15 @@ router.post('/create-debate-space', async (req, res) => {
         console.log('Space created successfully:', space);
 
         // Create or get speakers (speakers are global, not per-space)
+        // Use AI-powered handle finder to get real Twitter handles
         const speakers = {};
+        console.log('🔍 Finding Twitter handles for participants...');
+        const handleMap = await findMultipleHandles(participants.map(p => p.name));
+        
         for (const participant of participants) {
-            const username = '@' + participant.name.replace(/\s+/g, '');
+            // Use the found handle instead of generating one
+            const username = handleMap[participant.name];
+            console.log(`Using handle ${username} for ${participant.name}`);
 
             // Try to get existing speaker first
             let { data: speaker, error: getError } = await supabase

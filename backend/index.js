@@ -7,7 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import debateRoutes from './routes/debate-analyzer.js';
 import claimSourcesRoutes from './routes/claim-sources.js';
 import spaceEndRoutes from './routes/space-end.js';
-import { getThreadTweets } from './services/twitter.js';
+import twitterService, { getThreadTweets } from './services/twitter.js';
 
 // ES module dirname equivalent
 const __filename = fileURLToPath(import.meta.url);

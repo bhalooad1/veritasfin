@@ -93,13 +93,15 @@ class DebateParser {
                 if (this.isValidSpeaker(normalizedName)) {
                     flushMessage(); // Save previous speaker's message
 
-                    // Standardize the speaker names
-                    if (normalizedName.toLowerCase().includes('kamala') ||
-                        normalizedName.toLowerCase().includes('harris')) {
+                    // Standardize well-known speaker names, otherwise use normalized name
+                    const lowerName = normalizedName.toLowerCase();
+                    if (lowerName.includes('kamala') || lowerName.includes('harris')) {
                         currentSpeaker = 'Kamala Harris';
-                    } else if (normalizedName.toLowerCase().includes('trump') ||
-                              normalizedName.toLowerCase().includes('donald')) {
+                    } else if (lowerName.includes('trump') || lowerName.includes('donald')) {
                         currentSpeaker = 'Donald Trump';
+                    } else {
+                        // Use the normalized (Title Case) name for any other speaker
+                        currentSpeaker = normalizedName;
                     }
 
                     if (content) currentContent = content;
@@ -150,6 +152,7 @@ class DebateParser {
 
     /**
      * Check if a speaker is a valid debate participant
+     * Now accepts ANY speaker that's not a moderator
      */
     isValidSpeaker(speaker) {
         // First check if it's a moderator (which we want to exclude)
@@ -157,16 +160,18 @@ class DebateParser {
             return false;
         }
 
-        // Normalize speaker name for comparison
-        const normalized = speaker.toUpperCase();
+        // Accept any speaker that:
+        // 1. Has at least 2 characters
+        // 2. Is not just "SPEAKER" or similar generic terms
+        const normalized = speaker.toUpperCase().trim();
+        const genericTerms = ['SPEAKER', 'MODERATOR', 'HOST', 'ANNOUNCER', 'NARRATOR'];
+        
+        if (normalized.length < 2 || genericTerms.includes(normalized)) {
+            return false;
+        }
 
-        // Check if it matches any valid speaker pattern
-        return this.validSpeakers.some(validName =>
-            normalized.includes('KAMALA') ||
-            normalized.includes('HARRIS') ||
-            normalized.includes('TRUMP') ||
-            normalized.includes('DONALD')
-        );
+        // Accept this as a valid speaker!
+        return true;
     }
 
     /**
