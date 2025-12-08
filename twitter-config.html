@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twitter Bot Configuration - Veritas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 500px;
+      height: 600px;
+      font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", monospace;
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      flex: 1;
+      padding: 32px;
+      overflow-y: auto;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .title {
+      font-size: 16px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+    }
+
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      color: #71767b;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      color: #ffffff;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #333333;
+      color: #ffffff;
+      padding: 12px 16px;
+      font-family: inherit;
+      font-size: 12px;
+      border-radius: 0;
+      transition: border-color 0.2s ease;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #00ba7c;
+    }
+
+    .input.password {
+      font-family: monospace;
+      letter-spacing: 2px;
+    }
+
+    .help-text {
+      font-size: 10px;
+      color: #71767b;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .button {
+      background: transparent;
+      color: #ffffff;
+      border: 1px solid #333333;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      padding: 12px 24px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+
+    .button:hover {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .button.primary {
+      border-color: #00ba7c;
+      color: #00ba7c;
+    }
+
+    .button.primary:hover {
+      background: rgba(0, 186, 124, 0.1);
+    }
+
+    .button.danger {
+      border-color: #dc2626;
+      color: #dc2626;
+    }
+
+    .button.danger:hover {
+      background: rgba(220, 38, 38, 0.1);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #1a1a1a;
+      border: 1px solid #333333;
+      margin-bottom: 20px;
+      font-size: 11px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .status-dot.success {
+      background: #00ba7c;
+    }
+
+    .status-dot.error {
+      background: #dc2626;
+    }
+
+    .status-dot.warning {
+      background: #ffd400;
+    }
+
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: #333333;
+      margin: 24px 0;
+    }
+
+    .instructions {
+      background: #1a1a1a;
+      border: 1px solid #333333;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .instructions-title {
+      font-size: 11px;
+      color: #00ba7c;
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    .instructions ol {
+      margin-left: 16px;
+      font-size: 10px;
+      color: #71767b;
+      line-height: 1.5;
+    }
+
+    .instructions li {
+      margin-bottom: 8px;
+    }
+
+    .instructions a {
+      color: #00ba7c;
+      text-decoration: none;
+    }
+
+    .instructions a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icon16.png" alt="Veritas" style="width: 20px; height: 20px;">
+      <div class="title">TWITTER BOT CONFIGURATION</div>
+    </div>
+
+    <div class="instructions">
+      <div class="instructions-title">SETUP INSTRUCTIONS</div>
+      <ol>
+        <li>Go to <a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">developer.twitter.com</a></li>
+        <li>Create a new app with "Read and Write" permissions</li>
+        <li>Generate API keys and access tokens</li>
+        <li>Find your bot's User ID using the API or tools like tweeterid.com</li>
+        <li>Enter the credentials below and click "Save Configuration"</li>
+      </ol>
+    </div>
+
+    <div id="statusIndicator" class="status-indicator" style="display: none;">
+      <div class="status-dot" id="statusDot"></div>
+      <div id="statusText">Bot status unknown</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">API Credentials</div>
+
+      <div class="form-group">
+        <label class="label">API Key</label>
+        <input type="text" class="input" id="apiKey" placeholder="Enter your Twitter API key">
+        <div class="help-text">Your app's API key from the Twitter Developer Portal</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">API Secret</label>
+        <input type="password" class="input password" id="apiSecret" placeholder="Enter your API secret">
+        <div class="help-text">Keep this secret secure</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">Access Token</label>
+        <input type="text" class="input" id="accessToken" placeholder="Enter your access token">
+        <div class="help-text">Your account's access token</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">Access Token Secret</label>
+        <input type="password" class="input password" id="accessTokenSecret" placeholder="Enter your access token secret">
+        <div class="help-text">Keep this secret secure</div>
+      </div>
+
+      <div class="form-group">
+        <label class="label">Bot User ID</label>
+        <input type="text" class="input" id="botUserId" placeholder="Enter your bot's Twitter user ID">
+        <div class="help-text">Numeric user ID of your bot account (not @username)</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-title">Bot Settings</div>
+
+      <div class="form-group">
+        <label class="label">Check Interval (minutes)</label>
+        <input type="number" class="input" id="checkInterval" value="0.5" min="0.5" max="60" step="0.5">
+        <div class="help-text">How often to check for new mentions (0.5 = 30 seconds)</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <button class="button primary" id="saveConfig">Save Configuration</button>
+      <button class="button" id="testConfig">Test Connection</button>
+      <button class="button danger" id="disableBot">Disable Bot</button>
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button class="button" id="backToMain">← Back to Main</button>
+    </div>
+  </div>
+
+  <script src="twitter-config.js"></script>
+</body>
+</html>

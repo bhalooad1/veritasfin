@@ -5,12 +5,14 @@
   "description": "Real-time fact checking for X Spaces with credibility scoring",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "https://twitter.com/*",
     "https://x.com/*",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "https://api.twitter.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -63,6 +65,8 @@
         "analytics.js",
         "process-debate.html",
         "process-debate.js",
+        "twitter-config.html",
+        "twitter-config.js",
         "libs/d3.v7.min.js",
         "libs/chart.js"
       ],

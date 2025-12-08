@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -197,6 +198,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header-section">
@@ -224,6 +226,13 @@
           <span class="status-text" id="backendStatus">CHECKING</span>
         </div>
       </div>
+      <div class="status-line">
+        <span class="status-key">TWITTER BOT</span>
+        <div class="status-value-container">
+          <span class="status-indicator" id="twitterDot"></span>
+          <span class="status-text" id="twitterStatus">DISABLED</span>
+        </div>
+      </div>
     </div>
 
     <div class="divider"></div>
@@ -247,6 +256,14 @@
         </span>
         PROCESS DEBATE
       </button>
+      <button class="button primary" id="viewThreadAnalyticsBtn" style="display: none;">
+        <span class="button-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22,12 18,12 15,21 9,3 6,12 2,12"></polyline>
+          </svg>
+        </span>
+        VIEW THREAD ANALYTICS
+      </button>
     </div>
 
     <div class="footer-section">
@@ -256,4 +273,5 @@
 
   <script src="popup.js"></script>
 </body>
+
 </html>
