@@ -1549,17 +1549,146 @@ app.post('/api/threads/analyze', async (req, res) => {
       }
     });
 
-    // Generate summary text
-    let summaryText = `🧵 Thread Analyzed (${threadData.tweets.length} tweets)\n`;
-    summaryText += `✅ TRUE: ${stats.true} | ❌ FALSE: ${stats.false} | ⚠️ MIXED: ${stats.misleading + stats.unverified}\n`;
+    // Calculate speaker averages and find worst claim per speaker
+    const bySpeaker = {};
+    messages?.forEach(msg => {
+      if (msg.truth_score !== null) {
+        const speaker = msg.speaker_username || 'Unknown';
+        if (!bySpeaker[speaker]) {
+          bySpeaker[speaker] = {
+            displayName: msg.speaker_display_name || speaker,
+            scores: [],
+            messages: []
+          };
+        }
+        bySpeaker[speaker].scores.push(msg.truth_score);
+        bySpeaker[speaker].messages.push(msg);
+      }
+    });
 
-    if (stats.false > 0) {
-      summaryText += `⚠️ Found ${stats.false} false claim(s) in this thread.`;
-    } else if (stats.true > stats.false) {
-      summaryText += `📊 Thread appears mostly accurate.`;
-    } else {
-      summaryText += `📊 Mixed accuracy in this thread.`;
+    // Calculate averages and find worst claim for each speaker
+    const speakerStats = [];
+    Object.keys(bySpeaker).forEach(username => {
+      const data = bySpeaker[username];
+      const avgScore = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+      const worstClaim = data.messages.sort((a, b) => a.truth_score - b.truth_score)[0];
+
+      speakerStats.push({
+        username,
+        displayName: data.displayName,
+        avgScore: avgScore.toFixed(1),
+        worstClaim: {
+          content: worstClaim.content,
+          score: worstClaim.truth_score
+        }
+      });
+    });
+
+    // Get credibility score
+    const { data: spaceData } = await supabase
+      .from('spaces')
+      .select('overall_credibility_score')
+      .eq('id', spaceId)
+      .single();
+
+    const credibilityScore = spaceData?.overall_credibility_score || 100;
+
+    // Collect all message content for conversation summary
+    const allContent = messages?.map(m => m.content).join(' ') || '';
+
+    // Generate summary using Grok
+    console.log('🤖 Calling Grok to generate thread summary...');
+
+    let summaryText;
+    try {
+      const grokResponse = await fetch(`${process.env.GROK_API_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROK_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'grok-4-1-fast-reasoning',
+          messages: [
+            {
+              role: 'system',
+              content: `Create a professional, journalist-style tweet summarizing this X thread fact-check analysis. 
+
+CRITICAL RULES:
+- NO EMOJIS whatsoever
+- Sound professional and human, not AI-generated
+- Keep it under 280 characters total
+- Use concise, punchy sentences
+
+REQUIRED FORMAT (use this exact structure):
+1. First line: Brief 1-sentence summary of what the thread discussed
+2. Credibility Score line: "Credibility Score: X/100"
+3. Claims breakdown: "Fact-checked X claims: Y true, Z false, W mixed"
+4. Speaker accuracy: Each speaker's average score on one line
+5. Least accurate section: List each speaker's weakest claim topic (2-3 word description) with score
+6. Final verdict: One sentence overall assessment
+
+Example:
+"Thread discussed vaccine efficacy claims and CDC data interpretation.
+
+Credibility Score: 72/100
+
+Fact-checked 5 claims: 2 true, 2 false, 1 mixed.
+
+@User1 averaged 7/10.
+@User2 averaged 4/10.
+
+Least accurate:
+@User1 on efficacy rates (3/10)
+@User2 on CDC statistics (2/10)
+
+Mixed accuracy, several claims need verification."
+
+Write naturally. Be direct and informative.`
+            },
+            {
+              role: 'user',
+              content: `Create thread summary:
+
+Thread content (use this to write a 1-sentence topic summary):
+${allContent.substring(0, 800)}
+
+Credibility Score: ${credibilityScore}/100
+Total claims: ${stats.total}
+Verdicts: ${stats.true} true, ${stats.false} false, ${stats.misleading} misleading, ${stats.unverified} unverified
+
+Speakers:
+${speakerStats.map(s =>
+                `${s.username}: averaged ${s.avgScore}/10, worst claim "${s.worstClaim.content.substring(0, 50)}..." (${s.worstClaim.score}/10)`
+              ).join('\n')}`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 350
+        })
+      });
+
+      if (grokResponse.ok) {
+        const grokData = await grokResponse.json();
+        summaryText = grokData.choices[0]?.message?.content?.trim();
+      }
+    } catch (err) {
+      console.error('Grok summary error:', err);
     }
+
+    // Fallback if Grok fails
+    if (!summaryText) {
+      summaryText = `Thread Analyzed (${threadData.tweets.length} tweets)\n`;
+      summaryText += `Credibility Score: ${credibilityScore}/100\n`;
+      summaryText += `Fact-checked ${stats.total} claims: ${stats.true} true, ${stats.false} false, ${stats.misleading + stats.unverified} mixed.\n`;
+      if (stats.false > 0) {
+        summaryText += `Found ${stats.false} false claim(s) in this thread.`;
+      } else {
+        summaryText += `Thread appears mostly accurate.`;
+      }
+    }
+
+    console.log('✅ Thread summary generated');
 
     // Store summary but don't trigger edge function yet
     await supabase

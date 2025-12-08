@@ -202,6 +202,18 @@ async function generateSummaryAsync(space_id) {
         // Sort by most messages (primary speakers first)
         speakerStats.sort((a, b) => bySpeaker[b.username].messages.length - bySpeaker[a.username].messages.length);
 
+        // Get space info for credibility score
+        const { data: spaceData } = await supabase
+            .from('spaces')
+            .select('overall_credibility_score, title')
+            .eq('id', space_id)
+            .single();
+
+        const credibilityScore = spaceData?.overall_credibility_score || 100;
+
+        // Collect all message content for conversation summary
+        const allContent = messages.map(m => m.content).join(' ');
+
         // Call Grok for summary
         console.log('🤖 Calling Grok to generate tweet summary...');
 
@@ -216,42 +228,59 @@ async function generateSummaryAsync(space_id) {
                 messages: [
                     {
                         role: 'system',
-                        content: `Create a natural, journalist-style tweet summarizing this Space fact-check. No emojis. Sound human, not AI-generated.
+                        content: `Create a professional, journalist-style tweet summarizing this X Space fact-check analysis. 
 
-Keep it under 280 characters. Use short, punchy sentences. Vary sentence length. Be conversational but professional.
+CRITICAL RULES:
+- NO EMOJIS whatsoever
+- Sound professional and human, not AI-generated
+- Keep it under 280 characters total
+- Use concise, punchy sentences
 
-Include: total claims, verdict breakdown, speaker accuracy averages, and least accurate claim from each speaker (just brief topic, not full quote).
+REQUIRED FORMAT (use this exact structure):
+1. First line: Brief 1-sentence summary of what the conversation was about (the main topics discussed)
+2. Credibility Score line: "Credibility Score: X/100"
+3. Claims breakdown: "Fact-checked X claims: Y true, Z false, W mixed"
+4. Speaker accuracy: Each speaker's average score on one line
+5. Least accurate section: List each speaker's weakest claim topic (2-3 word description) with score
+6. Final verdict: One sentence overall assessment
 
-Example style:
-"Fact-checked this Space: 16 claims from 2 speakers.
+Example:
+"Discussion covered election security measures and voting data accuracy.
 
-8 true, 5 false, 3 misleading.
+Credibility Score: 72/100
 
-Speaker accuracy:
-@SpeakerA averaged 7/10
-@SpeakerB averaged 3/10
+Fact-checked 16 claims: 8 true, 5 false, 3 mixed.
+
+@SpeakerA averaged 7/10.
+@SpeakerB averaged 4/10.
 
 Least accurate:
-@SpeakerA on voting data: 2/10
-@SpeakerB on climate stats: 1/10"
+@SpeakerA on voter turnout data (3/10)
+@SpeakerB on fraud statistics (2/10)
 
-Write naturally. Don't be robotic or template-like.`
+Mixed accuracy overall, several claims need context."
+
+Write naturally. Be direct and informative.`
                     },
                     {
                         role: 'user',
                         content: `Create tweet summary:
 
+Conversation content (use this to write a 1-sentence topic summary):
+${allContent.substring(0, 800)}
+
+Credibility Score: ${credibilityScore}/100
 Total claims: ${stats.total_messages}
 Verdicts: ${stats.by_verdict.true} true, ${stats.by_verdict.false} false, ${stats.by_verdict.misleading} misleading, ${stats.by_verdict.unverified} unverified
 
 Speakers:
 ${speakerStats.map(s =>
-    `@${s.username}: averaged ${s.avgScore}/10, worst claim "${s.worstClaim.content.substring(0, 50)}..." (${s.worstClaim.score}/10)`
-).join('\n')}`
+                            `@${s.username}: averaged ${s.avgScore}/10, worst claim "${s.worstClaim.content.substring(0, 50)}..." (${s.worstClaim.score}/10)`
+                        ).join('\n')}`
                     }
                 ],
-                temperature: 0.8,
-                max_tokens: 200
+                temperature: 0.7,
+                max_tokens: 350
             })
         });
 
