@@ -1,6 +1,6 @@
 # Space End Detection & Summary Generation
 
-Automatically detects when a Twitter Space ends and generates a tweet-ready summary.
+Automatically detects when an X Space ends and generates a tweet-ready summary.
 
 ## How It Works
 
@@ -37,7 +37,7 @@ Copy and run `/backend/migrations/add_space_end_tracking.sql` in Supabase SQL Ed
 ### 3. Test It
 
 #### Option A: Test with Console (Recommended)
-1. Open a Twitter Space page
+1. Open an X Space page
 2. Open DevTools Console (F12)
 3. Run this to simulate space end:
 ```javascript
@@ -72,7 +72,7 @@ WHERE id = 'your-space-id';
 ```
 
 #### Option B: Test with Real Space
-1. Start monitoring a real Twitter Space with Veritas
+1. Start monitoring a real X Space with Veritas
 2. Wait for space to actually end
 3. Watch for "Ended" status in UI
 4. Space will be automatically marked as ended

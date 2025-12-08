@@ -1,5 +1,5 @@
 -- =====================================================
--- VERITAS - Twitter Spaces Fact-Checking Backend
+-- VERITAS - X Spaces Fact-Checking Backend
 -- Supabase Database Schema
 -- =====================================================
 
@@ -42,7 +42,7 @@ CREATE TABLE speakers (
 -- Create index for faster username lookups
 CREATE INDEX idx_speakers_username ON speakers(username);
 
--- Spaces table (Twitter Spaces sessions)
+-- Spaces table (X Spaces sessions)
 CREATE TABLE spaces (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT, -- Optional user-provided title
@@ -379,7 +379,7 @@ CREATE INDEX idx_messages_space_created ON messages(space_id, created_at DESC);
 -- =====================================================
 
 COMMENT ON TABLE speakers IS 'Stores Twitter/X user information for speakers in Spaces';
-COMMENT ON TABLE spaces IS 'Stores Twitter Spaces sessions being tracked';
+COMMENT ON TABLE spaces IS 'Stores X Spaces sessions being tracked';
 COMMENT ON TABLE messages IS 'Stores individual message blocks with fact-checking results';
 
 COMMENT ON COLUMN messages.sequence_number IS 'Order of message within the Space (1, 2, 3, ...)';

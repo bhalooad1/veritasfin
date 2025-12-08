@@ -65,7 +65,7 @@ router.post('/create-debate-space', async (req, res) => {
         // Prepare the space data matching the exact schema
         const spaceData = {
             title: title || 'Presidential Debate Analysis',
-            space_url: null, // Not a Twitter space URL
+            space_url: null, // Not a X space URL
             started_at: new Date().toISOString(),
             ended_at: new Date().toISOString(),
             total_messages: 0,

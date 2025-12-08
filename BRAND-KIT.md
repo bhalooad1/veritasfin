@@ -1,5 +1,5 @@
 # VERITAS BRAND KIT
-**Real-time truth verification for Twitter Spaces**
+**Real-time truth verification for X Spaces**
 
 ---
 

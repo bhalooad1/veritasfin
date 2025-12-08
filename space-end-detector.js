@@ -1,5 +1,5 @@
 // Space End Detector
-// Monitors Twitter Spaces for "Ended" status and triggers Supabase update
+// Monitors X Spaces for "Ended" status and triggers Supabase update
 
 let isMonitoringSpaceEnd = false;
 let spaceEndDetected = false;
@@ -111,7 +111,7 @@ async function handleSpaceEnd() {
         if (!spaceId) {
             console.error('❌ No space ID found in storage');
             console.error('💡 CAUSE: Space was never created (backend was down or page loaded before space creation)');
-            console.error('💡 FIX: Refresh the Twitter Space page to trigger space creation, then try again');
+            console.error('💡 FIX: Refresh the X Space page to trigger space creation, then try again');
             return;
         }
 

@@ -30,7 +30,7 @@ router.post('/:messageId/:claimIndex/generate-sources', async (req, res) => {
         console.log(`📝 Claim: "${claimText}"`);
 
         // Debug: Log model being used
-        const modelToUse = 'grok-4.1-fast';
+        const modelToUse = 'grok-4-1-fast-reasoning';
         console.log(`\n⚡ MODEL DEBUG:`);
         console.log(`   Using model: ${modelToUse}`);
         console.log(`   Model type: Lightning fast (optimized for widget)`);
@@ -100,12 +100,6 @@ Use web search to ensure all URLs are current and accessible.`
                         content: `Use web search to find credible sources for this claim:\n\n"${claimText}"`
                     }
                 ],
-                tools: [
-                    {
-                        type: "web_search"
-                    }
-                ],
-                tool_choice: "auto",
                 temperature: 0.3,
                 max_tokens: 2000
             })

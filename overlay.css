@@ -155,8 +155,12 @@
   color: #00ba7c;
 }
 
+.stat-value.medium-score {
+  color: #cc9900;
+}
+
 .stat-value.questionable {
-  color: #dc2626;
+  color: #8b0000;
 }
 
 .veritas-controls {
@@ -526,26 +530,16 @@
   line-height: 1.5;
 }
 
-/* Scrollbar styling - Minimal */
+/* Scrollbar styling - Hidden but functional */
 .veritas-claims::-webkit-scrollbar,
 .detail-content::-webkit-scrollbar {
-  width: 2px;
+  display: none;
 }
 
-.veritas-claims::-webkit-scrollbar-track,
-.detail-content::-webkit-scrollbar-track {
-  background: #000000;
-}
-
-.veritas-claims::-webkit-scrollbar-thumb,
-.detail-content::-webkit-scrollbar-thumb {
-  background: #ffffff;
-  border-radius: 0;
-}
-
-.veritas-claims::-webkit-scrollbar-thumb:hover,
-.detail-content::-webkit-scrollbar-thumb:hover {
-  background: #71767b;
+.veritas-claims,
+.detail-content {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
 /* Detail View Styling - Minimal Swiss Design */

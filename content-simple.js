@@ -11,8 +11,8 @@ let processedCaptions = new Set();
 let displayedMessages = []; // Messages shown in overlay
 let pollingMessageIds = new Set(); // Track messages being polled to prevent duplicates
 let liveMessageElement = null; // Current live message element being updated
-let truthfulCount = 0; // Messages with score >= 6
-let questionableCount = 0; // Messages with score < 6
+// Track speaker scores for stats display
+let speakerScores = {}; // { 'username': { displayName: '', scores: [], avgScore: 0 } }
 
 // Debug function - accessible from console
 window.veritasDebug = {
@@ -53,14 +53,11 @@ function createOverlay() {
         </div>
       </div>
       <div class="veritas-stats">
-        <div class="stat-item" data-tooltip="TOTAL">
-          <div class="stat-value" id="veritas-total">0</div>
+        <div class="stat-item" id="speaker-1-stat" data-tooltip="-">
+          <div class="stat-value" id="speaker-1-score">-</div>
         </div>
-        <div class="stat-item" data-tooltip="TRUTHFUL">
-          <div class="stat-value truthful" id="veritas-truthful">0</div>
-        </div>
-        <div class="stat-item" data-tooltip="QUESTIONABLE">
-          <div class="stat-value questionable" id="veritas-questionable">0</div>
+        <div class="stat-item" id="speaker-2-stat" data-tooltip="-">
+          <div class="stat-value" id="speaker-2-score">-</div>
         </div>
       </div>
       <div class="veritas-claims" id="veritas-claims">
@@ -98,7 +95,7 @@ function createOverlay() {
     if (spaceId) {
       chrome.runtime.sendMessage({ type: 'OPEN_ANALYTICS', spaceId });
     } else {
-      alert('Veritas: No active Twitter Space detected. Please join a Space first.');
+      alert('Veritas: No active X Space detected. Please join a Space first.');
     }
   });
 
@@ -255,15 +252,63 @@ function hideDetailView() {
   mainView.style.display = 'flex';
 }
 
-// Update stats display
+// Update stats display with speaker average scores
 function updateStats() {
-  const totalEl = document.getElementById('veritas-total');
-  const truthfulEl = document.getElementById('veritas-truthful');
-  const questionableEl = document.getElementById('veritas-questionable');
+  // Get top 2 speakers by number of scored messages
+  const speakers = Object.keys(speakerScores)
+    .map(username => ({
+      username,
+      ...speakerScores[username]
+    }))
+    .filter(s => s.scores.length > 0)
+    .sort((a, b) => b.scores.length - a.scores.length)
+    .slice(0, 2);
 
-  if (totalEl) totalEl.textContent = displayedMessages.length;
-  if (truthfulEl) truthfulEl.textContent = truthfulCount;
-  if (questionableEl) questionableEl.textContent = questionableCount;
+  // Update speaker 1
+  const speaker1Stat = document.getElementById('speaker-1-stat');
+  const speaker1Score = document.getElementById('speaker-1-score');
+  if (speakers[0]) {
+    const avgScore = Math.round(speakers[0].avgScore);
+    speaker1Score.textContent = avgScore;
+    speaker1Stat.setAttribute('data-tooltip', `@${speakers[0].username}`);
+
+    // Apply color based on score (same as analytics)
+    speaker1Score.className = 'stat-value';
+    if (avgScore >= 7) {
+      speaker1Score.classList.add('truthful');
+    } else if (avgScore >= 4) {
+      speaker1Score.classList.add('medium-score');
+    } else {
+      speaker1Score.classList.add('questionable');
+    }
+  } else {
+    speaker1Score.textContent = '-';
+    speaker1Score.className = 'stat-value';
+    speaker1Stat.setAttribute('data-tooltip', '-');
+  }
+
+  // Update speaker 2
+  const speaker2Stat = document.getElementById('speaker-2-stat');
+  const speaker2Score = document.getElementById('speaker-2-score');
+  if (speakers[1]) {
+    const avgScore = Math.round(speakers[1].avgScore);
+    speaker2Score.textContent = avgScore;
+    speaker2Stat.setAttribute('data-tooltip', `@${speakers[1].username}`);
+
+    // Apply color based on score (same as analytics)
+    speaker2Score.className = 'stat-value';
+    if (avgScore >= 7) {
+      speaker2Score.classList.add('truthful');
+    } else if (avgScore >= 4) {
+      speaker2Score.classList.add('medium-score');
+    } else {
+      speaker2Score.classList.add('questionable');
+    }
+  } else {
+    speaker2Score.textContent = '-';
+    speaker2Score.className = 'stat-value';
+    speaker2Stat.setAttribute('data-tooltip', '-');
+  }
 }
 
 // Make overlay draggable
@@ -499,7 +544,7 @@ async function ensureSpaceExists() {
 
     currentSpace = {
       id: data.space_id,
-      title: 'Twitter Space',
+      title: 'X Space',
       url: spaceUrl
     };
 
@@ -670,12 +715,19 @@ async function pollForAnalysis(messageId, speaker, content) {
             element.appendChild(scoreDiv);
             console.log(`Veritas DEBUG: Successfully added truth score ${message.truth_score} to element`);
 
-            // Update stats based on score
-            if (message.truth_score >= 6) {
-              truthfulCount++;
-            } else {
-              questionableCount++;
+            // Track speaker score for stats
+            if (!speakerScores[msg.username]) {
+              speakerScores[msg.username] = {
+                displayName: msg.displayName,
+                scores: [],
+                avgScore: 0
+              };
             }
+            speakerScores[msg.username].scores.push(message.truth_score);
+            // Calculate average
+            const scores = speakerScores[msg.username].scores;
+            speakerScores[msg.username].avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+
             updateStats();
           } else {
             // No score - could be opinion, too short, or no factual claims

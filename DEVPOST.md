@@ -1,20 +1,20 @@
-# Veritas - Real-Time Fact-Checking for Twitter Spaces
+# Veritas - Real-Time Fact-Checking for X Spaces
 
 ## Inspiration
 
-In an era where misinformation spreads faster than ever, Twitter Spaces has become a powerful platform for live discussions on critical topics—from politics to health to economics. However, listeners have no way to verify claims in real-time, leading to the rapid spread of false information.
+In an era where misinformation spreads faster than ever, X Spaces has become a powerful platform for live discussions on critical topics—from politics to health to economics. However, listeners have no way to verify claims in real-time, leading to the rapid spread of false information.
 
-We were inspired to build **Veritas** (Latin for "truth") to empower users with instant, AI-powered fact-checking directly in their Twitter Spaces experience. Our goal is to make truth verification as seamless as scrolling through a feed—no need to leave the conversation to fact-check claims.
+We were inspired to build **Veritas** (Latin for "truth") to empower users with instant, AI-powered fact-checking directly in their X Spaces experience. Our goal is to make truth verification as seamless as scrolling through a feed—no need to leave the conversation to fact-check claims.
 
 ## What it does
 
-**Veritas** is a Chrome extension that provides real-time fact-checking for Twitter Spaces conversations. Here's what it does:
+**Veritas** is a Chrome extension that provides real-time fact-checking for X Spaces conversations. Here's what it does:
 
 ### 🎯 Real-Time Fact-Checking
-- **Live Caption Monitoring**: Automatically captures and processes captions from Twitter Spaces as they appear
+- **Live Caption Monitoring**: Automatically captures and processes captions from X Spaces as they appear
 - **AI-Powered Analysis**: Uses Grok AI to extract factual claims and verify them against trusted sources
 - **Instant Credibility Scoring**: Assigns truth scores (1-10) to each claim and tracks overall space credibility
-- **Visual Overlay**: Displays fact-check results directly on the Twitter Spaces page with a sleek, minimal UI
+- **Visual Overlay**: Displays fact-check results directly on the X Spaces page with a sleek, minimal UI
 
 ### 📊 Comprehensive Analytics Dashboard
 - **Conversation Timeline**: Interactive D3.js visualization showing truth scores over time
@@ -37,7 +37,7 @@ We were inspired to build **Veritas** (Latin for "truth") to empower users with 
 
 ### Frontend (Chrome Extension)
 - **Manifest V3**: Modern Chrome extension architecture
-- **Content Scripts**: Monitor Twitter Spaces DOM for captions and UI changes
+- **Content Scripts**: Monitor X Spaces DOM for captions and UI changes
 - **Real-Time Processing**: Captures captions as they appear, extracts speaker information, and sends to backend
 - **Overlay UI**: Custom-built overlay with drag-and-drop functionality
 - **Analytics Dashboard**: Standalone HTML page with D3.js visualizations and Chart.js graphs
@@ -56,7 +56,7 @@ We were inspired to build **Veritas** (Latin for "truth") to empower users with 
 - **Credibility Tracking**: Dynamic credibility scores that update as new claims are verified
 
 ### Database Schema
-- **Spaces**: Track Twitter Spaces with metadata, credibility scores, and summaries
+- **Spaces**: Track X Spaces with metadata, credibility scores, and summaries
 - **Messages**: Store all captions with fact-check results, truth scores, and explanations
 - **Speakers**: Global speaker database with username and display name tracking
 - **Statistics**: Pre-computed views for fast analytics queries
@@ -72,7 +72,7 @@ We were inspired to build **Veritas** (Latin for "truth") to empower users with 
 ## Challenges we ran into
 
 ### 1. **Real-Time Caption Capture**
-Twitter Spaces doesn't provide a public API for captions. We had to reverse-engineer the DOM structure and build a robust monitoring system that:
+X Spaces doesn't provide a public API for captions. We had to reverse-engineer the DOM structure and build a robust monitoring system that:
 - Detects new caption elements as they appear
 - Handles dynamic DOM updates
 - Tracks speaker changes accurately
@@ -119,7 +119,7 @@ Tracking spaces, messages, speakers, and relationships required careful schema d
 ## Accomplishments that we're proud of
 
 ### ✅ **Real-Time Fact-Checking**
-We successfully built a system that fact-checks Twitter Spaces conversations in real-time, something that didn't exist before. Users can now see truth scores appear as speakers make claims.
+We successfully built a system that fact-checks X Spaces conversations in real-time, something that didn't exist before. Users can now see truth scores appear as speakers make claims.
 
 ### ✅ **Beautiful, Minimal UI**
 Our Swiss minimalism design philosophy resulted in a clean, professional interface that doesn't distract from the Space experience. The monospace aesthetic and high contrast make information easy to scan.
@@ -191,7 +191,7 @@ The codebase is well-structured and documented, making it easy for others to con
 ## Try It Out
 
 1. **Install the Extension**: Load the unpacked extension in Chrome
-2. **Join a Twitter Space**: Navigate to any active Twitter Space
+2. **Join a X Space**: Navigate to any active X Space
 3. **Watch the Magic**: Veritas automatically starts monitoring and fact-checking
 4. **Explore Analytics**: Click the analytics button to see detailed insights
 
@@ -239,5 +239,5 @@ Built with ❤️ by the Veritas team
 
 ---
 
-*Veritas - Seeing truth on Twitter Spaces*
+*Veritas - Seeing truth on X Spaces*
 

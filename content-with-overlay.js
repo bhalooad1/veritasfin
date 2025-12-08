@@ -150,7 +150,7 @@ async function ensureSpaceExists() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'Twitter Space',
+        title: 'X Space',
         space_url: spaceUrl,
         metadata: { started_at: new Date().toISOString() }
       })
@@ -159,7 +159,7 @@ async function ensureSpaceExists() {
     const data = await response.json();
     currentSpace = {
       id: data.space_id,
-      title: 'Twitter Space',
+      title: 'X Space',
       url: spaceUrl
     };
 

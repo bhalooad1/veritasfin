@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Veritas - Twitter Spaces Fact Checker",
+  "name": "Veritas - X Spaces Fact Checker",
   "version": "1.0.0",
-  "description": "Real-time fact checking for Twitter Spaces with credibility scoring",
+  "description": "Real-time fact checking for X Spaces with credibility scoring",
   "permissions": [
     "activeTab",
     "storage"

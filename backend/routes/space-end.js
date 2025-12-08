@@ -164,13 +164,43 @@ async function generateSummaryAsync(space_id) {
             }
         });
 
-        // Extract top claims (highest and lowest truth scores)
-        const rankedMessages = messages
-            .filter(m => m.truth_score !== null)
-            .sort((a, b) => b.truth_score - a.truth_score);
+        // Calculate speaker averages and find worst claim per speaker
+        const bySpeaker = {};
+        messages.forEach(msg => {
+            if (msg.truth_score !== null) {
+                const speaker = msg.speaker_username || 'Unknown';
+                if (!bySpeaker[speaker]) {
+                    bySpeaker[speaker] = {
+                        displayName: msg.speaker_display_name || speaker,
+                        scores: [],
+                        messages: []
+                    };
+                }
+                bySpeaker[speaker].scores.push(msg.truth_score);
+                bySpeaker[speaker].messages.push(msg);
+            }
+        });
 
-        const topTrueClaim = rankedMessages[0];
-        const topFalseClaim = rankedMessages[rankedMessages.length - 1];
+        // Calculate averages and find worst claim for each speaker
+        const speakerStats = [];
+        Object.keys(bySpeaker).forEach(username => {
+            const data = bySpeaker[username];
+            const avgScore = data.scores.reduce((a, b) => a + b, 0) / data.scores.length;
+            const worstClaim = data.messages.sort((a, b) => a.truth_score - b.truth_score)[0];
+
+            speakerStats.push({
+                username,
+                displayName: data.displayName,
+                avgScore: avgScore.toFixed(1),
+                worstClaim: {
+                    content: worstClaim.content,
+                    score: worstClaim.truth_score
+                }
+            });
+        });
+
+        // Sort by most messages (primary speakers first)
+        speakerStats.sort((a, b) => bySpeaker[b.username].messages.length - bySpeaker[a.username].messages.length);
 
         // Call Grok for summary
         console.log('🤖 Calling Grok to generate tweet summary...');
@@ -182,37 +212,46 @@ async function generateSummaryAsync(space_id) {
                 'Authorization': `Bearer ${process.env.GROK_API_KEY}`
             },
             body: JSON.stringify({
-                model: 'grok-4-1-fast-reasoning', // Fast Grok 4.1 model for summaries
+                model: 'grok-4-1-fast-reasoning',
                 messages: [
                     {
                         role: 'system',
-                        content: `Create a punchy, engaging tweet (280 chars max) summarizing this debate fact-check.
+                        content: `Create a natural, journalist-style tweet summarizing this Space fact-check. No emojis. Sound human, not AI-generated.
 
-Format example:
-🎯 Presidential Debate Fact-Checked
-✅ TRUE: 8 | ❌ FALSE: 3 | ⚠️ MIXED: 5
-📌 Most accurate: [speaker] on [topic]
-🔍 Full analysis: [will be added]
+Keep it under 280 characters. Use short, punchy sentences. Vary sentence length. Be conversational but professional.
 
-Be concise, factual, use emojis for visual appeal. Focus on the numbers and key findings.`
+Include: total claims, verdict breakdown, speaker accuracy averages, and least accurate claim from each speaker (just brief topic, not full quote).
+
+Example style:
+"Fact-checked this Space: 16 claims from 2 speakers.
+
+8 true, 5 false, 3 misleading.
+
+Speaker accuracy:
+@SpeakerA averaged 7/10
+@SpeakerB averaged 3/10
+
+Least accurate:
+@SpeakerA on voting data: 2/10
+@SpeakerB on climate stats: 1/10"
+
+Write naturally. Don't be robotic or template-like.`
                     },
                     {
                         role: 'user',
                         content: `Create tweet summary:
 
-Total Statements: ${stats.total_messages}
-Verdicts:
-- TRUE: ${stats.by_verdict.true}
-- FALSE: ${stats.by_verdict.false}
-- MISLEADING: ${stats.by_verdict.misleading}
-- UNVERIFIED: ${stats.by_verdict.unverified}
+Total claims: ${stats.total_messages}
+Verdicts: ${stats.by_verdict.true} true, ${stats.by_verdict.false} false, ${stats.by_verdict.misleading} misleading, ${stats.by_verdict.unverified} unverified
 
-Top True Claim: "${topTrueClaim?.content?.substring(0, 100)}..." (${topTrueClaim?.speaker_display_name})
-Top False Claim: "${topFalseClaim?.content?.substring(0, 100)}..." (${topFalseClaim?.speaker_display_name})`
+Speakers:
+${speakerStats.map(s =>
+    `@${s.username}: averaged ${s.avgScore}/10, worst claim "${s.worstClaim.content.substring(0, 50)}..." (${s.worstClaim.score}/10)`
+).join('\n')}`
                     }
                 ],
-                temperature: 0.7,
-                max_tokens: 150
+                temperature: 0.8,
+                max_tokens: 200
             })
         });
 

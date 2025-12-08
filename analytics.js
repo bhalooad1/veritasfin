@@ -664,11 +664,7 @@ function renderChart(messages) {
                 padding: 20px;
             `;
             noDataMsg.innerHTML = `
-                <div style="font-size: 16px; margin-bottom: 10px;">NO TRUTH SCORES AVAILABLE</div>
-                <div style="font-size: 12px;">Messages need to be fact-checked to display truth scores</div>
-                <div style="font-size: 11px; margin-top: 10px; color: #555;">
-                    ${messagesWithScores.length} of ${messages.length} messages have been analyzed
-                </div>
+                <div style="font-size: 16px;">NO TRUTH SCORES AVAILABLE</div>
             `;
             parent.style.position = 'relative';
             parent.appendChild(noDataMsg);

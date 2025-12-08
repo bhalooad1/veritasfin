@@ -1,5 +1,5 @@
 // Content script that runs on Twitter/X pages
-// Monitors for Twitter Spaces captions and sends them for fact-checking
+// Monitors for X Spaces captions and sends them for fact-checking
 
 let isMonitoring = false;
 let overallScore = 100;
@@ -350,7 +350,7 @@ function manualScanForCaptions() {
   });
 }
 
-// Monitor for Twitter Spaces captions
+// Monitor for X Spaces captions
 function startMonitoring() {
   if (isMonitoring) return;
   isMonitoring = true;
