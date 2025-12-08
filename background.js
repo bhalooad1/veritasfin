@@ -552,3 +552,16 @@ chrome.runtime.onInstalled.addListener(() => {
   // Initialize Twitter bot
   twitterBot.initialize();
 });
+
+// IMPORTANT: Also initialize when service worker starts up (not just on install)
+// This ensures the bot keeps running after Chrome restart or service worker suspension
+(async () => {
+  console.log('🔄 Service worker starting - initializing Twitter bot...');
+  await twitterBot.initialize();
+
+  // Also trigger an immediate check
+  if (twitterBot.isEnabled) {
+    console.log('🔍 Running immediate mention check...');
+    twitterBot.checkMentions();
+  }
+})();
